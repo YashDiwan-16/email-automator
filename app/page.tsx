@@ -12,13 +12,13 @@ export default async function Home() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f7f7f4] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <main className="relative min-h-screen overflow-x-clip bg-[#f7f7f4] px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-50 [background-image:linear-gradient(to_right,#e8e8e2_1px,transparent_1px),linear-gradient(to_bottom,#e8e8e2_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_75%)]" />
       <div aria-hidden="true" className="pointer-events-none absolute -left-32 top-16 h-72 w-72 rounded-full bg-violet-200/60 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -right-32 top-72 h-80 w-80 rounded-full bg-emerald-100/80 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl">
-        <header className="mb-10 flex items-center justify-between">
+        <header className="sticky top-3 z-30 mb-10 flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-3 shadow-[0_12px_35px_-22px_rgba(15,23,42,0.45)] backdrop-blur sm:top-4 sm:px-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white shadow-lg shadow-slate-950/15">
               <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
@@ -39,8 +39,22 @@ export default async function Home() {
             <form action={logout}>
               <button
                 type="submit"
-                className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-950 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
               >
+                <svg
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    d="M8 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8m4-3 3-3-3-3m3 3H8"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.6"
+                  />
+                </svg>
                 Log out
               </button>
             </form>
