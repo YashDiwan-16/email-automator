@@ -72,7 +72,19 @@ export function parseAddressList(value: string): ParsedAddressList {
   return { addresses, invalidAddresses };
 }
 
-type AddressField = "to" | "cc" | "bcc";
+export type AddressField = "to" | "cc" | "bcc";
+
+export interface AddressGroups {
+  to: string[];
+  cc: string[];
+  bcc: string[];
+}
+
+export interface RawAddressGroups {
+  to: string;
+  cc: string;
+  bcc: string;
+}
 
 const rawAddressGroupsSchema = z.object({
   to: z.string().max(5_000, { error: "The To list is too long." }),
@@ -80,71 +92,88 @@ const rawAddressGroupsSchema = z.object({
   bcc: z.string().max(5_000, { error: "The BCC list is too long." }),
 });
 
-function deduplicateAddressGroups(
-  groups: Record<AddressField, string[]>,
-): Record<AddressField, string[]> {
+export function normalizeAddressGroups(groups: AddressGroups): AddressGroups {
   const seen = new Set<string>();
+  const normalized: AddressGroups = { to: [], cc: [], bcc: [] };
 
-  return Object.fromEntries(
-    (["to", "cc", "bcc"] as const).map((field) => [
-      field,
-      groups[field].filter((address) => {
-        const key = address.toLocaleLowerCase("en-US");
-        if (seen.has(key)) {
-          return false;
-        }
+  for (const field of ["to", "cc", "bcc"] as const) {
+    normalized[field] = groups[field].filter((address) => {
+      const key = address.toLocaleLowerCase("en-US");
+      if (seen.has(key)) {
+        return false;
+      }
 
-        seen.add(key);
-        return true;
-      }),
-    ]),
-  ) as Record<AddressField, string[]>;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  return normalized;
 }
 
-export const emailAddressGroupsSchema = rawAddressGroupsSchema.transform(
-  (input, context) => {
-    const parsedGroups = {
-      to: parseAddressList(input.to),
-      cc: parseAddressList(input.cc),
-      bcc: parseAddressList(input.bcc),
-    };
+interface AddressGroupIssue {
+  field: AddressField;
+  message: string;
+}
 
-    for (const field of ["to", "cc", "bcc"] as const) {
-      for (const invalidAddress of parsedGroups[field].invalidAddresses) {
-        context.addIssue({
-          code: "custom",
-          path: [field],
-          message: `Invalid email address: ${invalidAddress}`,
-        });
-      }
+function resolveAddressGroups(input: RawAddressGroups): {
+  groups: AddressGroups;
+  issues: AddressGroupIssue[];
+} {
+  const parsedGroups = {
+    to: parseAddressList(input.to),
+    cc: parseAddressList(input.cc),
+    bcc: parseAddressList(input.bcc),
+  };
+  const issues: AddressGroupIssue[] = [];
 
-      if (field === "to" && parsedGroups.to.addresses.length === 0) {
-        context.addIssue({
-          code: "custom",
-          path: ["to"],
-          message: "Enter at least one valid To address.",
-        });
-      }
-    }
-
-    const groups = deduplicateAddressGroups({
-      to: parsedGroups.to.addresses,
-      cc: parsedGroups.cc.addresses,
-      bcc: parsedGroups.bcc.addresses,
-    });
-    const recipientCount = groups.to.length + groups.cc.length + groups.bcc.length;
-
-    if (recipientCount > MAX_RECIPIENTS) {
-      context.addIssue({
-        code: "custom",
-        path: ["to"],
-        message: `Send to no more than ${MAX_RECIPIENTS} unique recipients at once.`,
+  for (const field of ["to", "cc", "bcc"] as const) {
+    for (const invalidAddress of parsedGroups[field].invalidAddresses) {
+      issues.push({
+        field,
+        message: `Invalid email address: ${invalidAddress}`,
       });
     }
 
-    return groups;
-  },
-);
+    if (field === "to" && parsedGroups.to.addresses.length === 0) {
+      issues.push({
+        field: "to",
+        message: "Enter at least one valid To address.",
+      });
+    }
+  }
+
+  const groups = normalizeAddressGroups({
+    to: parsedGroups.to.addresses,
+    cc: parsedGroups.cc.addresses,
+    bcc: parsedGroups.bcc.addresses,
+  });
+  const recipientCount = groups.to.length + groups.cc.length + groups.bcc.length;
+
+  if (recipientCount > MAX_RECIPIENTS) {
+    issues.push({
+      field: "to",
+      message: `Send to no more than ${MAX_RECIPIENTS} unique recipients at once.`,
+    });
+  }
+
+  return { groups, issues };
+}
+
+function addAddressGroupIssues(
+  input: RawAddressGroups,
+  addIssue: (issue: { code: "custom"; path: AddressField[]; message: string }) => void,
+): void {
+  for (const issue of resolveAddressGroups(input).issues) {
+    addIssue({ code: "custom", path: [issue.field], message: issue.message });
+  }
+}
+
+export const emailAddressGroupsSchema = rawAddressGroupsSchema
+  .superRefine((input, context) => {
+    addAddressGroupIssues(input, (issue) => context.addIssue(issue));
+  })
+  .transform((input) => resolveAddressGroups(input).groups);
 
 const rawEmailComposerSchema = rawAddressGroupsSchema.extend({
   accessToken: z
@@ -154,29 +183,17 @@ const rawEmailComposerSchema = rawAddressGroupsSchema.extend({
   idempotencyKey: z.uuid({ error: "Start a new send and try again." }),
 });
 
-export const emailComposerSchema = rawEmailComposerSchema.transform(
-  (input, context) => {
-    const addressGroups = emailAddressGroupsSchema.safeParse(input);
-
-    if (!addressGroups.success) {
-      for (const issue of addressGroups.error.issues) {
-        context.addIssue({
-          code: "custom",
-          path: issue.path,
-          message: issue.message,
-        });
-      }
-    }
-
+export const emailComposerSchema = rawEmailComposerSchema
+  .superRefine((input, context) => {
+    addAddressGroupIssues(input, (issue) => context.addIssue(issue));
+  })
+  .transform((input) => {
     return {
       accessToken: input.accessToken,
-      ...(addressGroups.success
-        ? addressGroups.data
-        : { to: [], cc: [], bcc: [] }),
+      ...resolveAddressGroups(input).groups,
       idempotencyKey: input.idempotencyKey,
     };
-  },
-);
+  });
 
 export type EmailComposerInput = z.input<typeof emailComposerSchema>;
 export type ValidatedEmailComposerInput = z.output<typeof emailComposerSchema>;

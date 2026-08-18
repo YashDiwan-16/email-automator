@@ -10,6 +10,7 @@ import {
   type EmailComposerField,
   type EmailComposerInput,
   MAX_RECIPIENTS,
+  normalizeAddressGroups,
   parseAddressList,
 } from "@/lib/email/schema";
 import type { SendEmailActionResult } from "@/types/email";
@@ -40,23 +41,14 @@ function createIdempotencyKey(): string {
 }
 
 function countAddressGroups(to: string, cc: string, bcc: string) {
-  const seen = new Set<string>();
-
-  function countUnique(value: string): number {
-    let count = 0;
-    for (const address of parseAddressList(value).addresses) {
-      const key = address.toLocaleLowerCase("en-US");
-      if (!seen.has(key)) {
-        seen.add(key);
-        count += 1;
-      }
-    }
-    return count;
-  }
-
-  const toCount = countUnique(to);
-  const ccCount = countUnique(cc);
-  const bccCount = countUnique(bcc);
+  const groups = normalizeAddressGroups({
+    to: parseAddressList(to).addresses,
+    cc: parseAddressList(cc).addresses,
+    bcc: parseAddressList(bcc).addresses,
+  });
+  const toCount = groups.to.length;
+  const ccCount = groups.cc.length;
+  const bccCount = groups.bcc.length;
 
   return {
     toCount,
@@ -78,7 +70,7 @@ function ResultNotice({ result }: { result: SendEmailActionResult }) {
     ? result.message
     : isPartial
       ? `${result.summary.acceptedCount} accepted, ${result.summary.failedCount} not accepted`
-      : `${result.summary.acceptedCount} ${result.summary.acceptedCount === 1 ? "email" : "emails"} accepted`;
+      : `${result.summary.acceptedCount} ${result.summary.acceptedCount === 1 ? "recipient" : "recipients"} accepted`;
   const summary = result.summary;
 
   return (
@@ -338,7 +330,7 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
               <AddressField
                 name="cc"
                 label="CC"
-                description="Visible to recipients in To and CC."
+                description="Visible in the message headers to every recipient."
                 placeholder="manager@example.com"
                 disabled={isPending}
                 error={errors.cc?.message}

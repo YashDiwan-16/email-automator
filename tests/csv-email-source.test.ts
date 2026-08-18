@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CsvInputError,
   parseEmailCsv,
-  sendCsvEmailBatch,
 } from "@/lib/email/csv-email-source";
+import { sendCsvEmailBatch } from "@/lib/email/csv-email-batch";
 import type { EmailProvider } from "@/lib/email/provider";
 
 describe("parseEmailCsv", () => {
@@ -105,5 +105,41 @@ three@example.com,,hidden@example.com`).rows;
         { rowNumber: 4, summary: { acceptedCount: 2 } },
       ],
     });
+  });
+
+  it("checkpoints a resumed row after sending only its pending envelope recipients", async () => {
+    const send = vi.fn<EmailProvider["send"]>(async (message) => ({
+      status: "completed",
+      messageId: "message-1",
+      accepted: message.envelopeRecipients ?? [],
+      rejected: [],
+    }));
+    const onRowComplete = vi.fn();
+
+    const result = await sendCsvEmailBatch({
+      provider: { send },
+      sender: { email: "updates@example.com", name: "Product team" },
+      rows: [
+        {
+          rowNumber: 2,
+          to: ["already-sent@example.com"],
+          cc: ["pending@example.com"],
+          bcc: [],
+          deliveryRecipients: ["pending@example.com"],
+        },
+      ],
+      onRowComplete,
+      retryDelayMs: 0,
+    });
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: ["already-sent@example.com"],
+        cc: ["pending@example.com"],
+        envelopeRecipients: ["pending@example.com"],
+      }),
+    );
+    expect(result).toMatchObject({ acceptedCount: 1, failedCount: 0 });
+    expect(onRowComplete).toHaveBeenCalledOnce();
   });
 });

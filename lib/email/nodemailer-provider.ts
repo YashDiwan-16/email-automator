@@ -11,6 +11,7 @@ import type {
 interface NodemailerDeliveryInfo {
   accepted?: unknown[];
   rejected?: unknown[];
+  rejectedErrors?: unknown[];
   messageId?: unknown;
 }
 
@@ -23,6 +24,7 @@ export interface SmtpTransportConfiguration {
   host?: string;
   port: number;
   secure: boolean;
+  requireTls: boolean;
   user: string;
   password: string;
 }
@@ -58,6 +60,46 @@ function readSmtpResponseCode(error: unknown): number | null {
   return typeof responseCode === "number" ? responseCode : null;
 }
 
+function readRejectedRecipient(error: unknown): string | null {
+  if (typeof error !== "object" || error === null) {
+    return null;
+  }
+
+  const recipient = Reflect.get(error, "recipient");
+  return typeof recipient === "string" ? recipient : null;
+}
+
+function classifyResponseCode(responseCode: number | null) {
+  return responseCode !== null && responseCode >= 400 && responseCode < 500
+    ? ("temporary" as const)
+    : ("permanent" as const);
+}
+
+function normalizeRejectedAddresses(
+  rejected: unknown[] | undefined,
+  rejectedErrors: unknown[] | undefined,
+) {
+  const errorsByRecipient = new Map(
+    (rejectedErrors ?? []).flatMap((error) => {
+      const recipient = readRejectedRecipient(error);
+      return recipient
+        ? [[recipient.toLocaleLowerCase("en-US"), error] as const]
+        : [];
+    }),
+  );
+
+  return normalizeDeliveredAddresses(rejected).map((recipient, index) => {
+    const error =
+      errorsByRecipient.get(recipient.toLocaleLowerCase("en-US")) ??
+      rejectedErrors?.[index];
+
+    return {
+      recipient,
+      failureKind: classifyResponseCode(readSmtpResponseCode(error)),
+    };
+  });
+}
+
 function classifyFailure(
   error: unknown,
 ): Extract<ProviderSendResult, { status: "failed" }> {
@@ -91,6 +133,14 @@ export class NodemailerEmailProvider implements EmailProvider {
         subject: message.subject,
         html: message.html,
         text: message.text,
+        ...(message.envelopeRecipients
+          ? {
+              envelope: {
+                from: message.sender.email,
+                to: message.envelopeRecipients,
+              },
+            }
+          : {}),
       });
 
       return {
@@ -98,20 +148,41 @@ export class NodemailerEmailProvider implements EmailProvider {
         messageId:
           typeof result.messageId === "string" ? result.messageId : "unknown",
         accepted: normalizeDeliveredAddresses(result.accepted),
-        rejected: normalizeDeliveredAddresses(result.rejected),
+        rejected: normalizeRejectedAddresses(
+          result.rejected,
+          result.rejectedErrors,
+        ),
       };
     } catch (error) {
+      if (typeof error === "object" && error !== null) {
+        const rejected = Reflect.get(error, "rejected");
+        if (Array.isArray(rejected) && rejected.length > 0) {
+          const rejectedErrors = Reflect.get(error, "rejectedErrors");
+
+          return {
+            status: "completed",
+            messageId: "unknown",
+            accepted: [],
+            rejected: normalizeRejectedAddresses(
+              rejected,
+              Array.isArray(rejectedErrors) ? rejectedErrors : undefined,
+            ),
+          };
+        }
+      }
+
       return classifyFailure(error);
     }
   }
 }
 
-export function createNodemailerEmailProvider(
+export function createSmtpTransportOptions(
   configuration: SmtpTransportConfiguration,
-): NodemailerEmailProvider {
-  const connection: SMTPTransport.Options = configuration.service
+): SMTPTransport.Options {
+  return configuration.service
     ? {
         service: configuration.service,
+        requireTLS: configuration.requireTls,
         auth: {
           user: configuration.user,
           pass: configuration.password,
@@ -121,11 +192,18 @@ export function createNodemailerEmailProvider(
         host: configuration.host,
         port: configuration.port,
         secure: configuration.secure,
+        requireTLS: configuration.requireTls,
         auth: {
           user: configuration.user,
           pass: configuration.password,
         },
       };
+}
 
-  return new NodemailerEmailProvider(nodemailer.createTransport(connection));
+export function createNodemailerEmailProvider(
+  configuration: SmtpTransportConfiguration,
+): NodemailerEmailProvider {
+  return new NodemailerEmailProvider(
+    nodemailer.createTransport(createSmtpTransportOptions(configuration)),
+  );
 }

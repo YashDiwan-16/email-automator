@@ -1,17 +1,22 @@
+import { render } from "react-email";
+
 import type { DeliverySummary, RecipientDeliveryResult } from "@/types/email";
 
 import type { EmailProvider, ProviderMessage, ProviderSendResult } from "./provider";
-import { PREDEFINED_EMAIL_TEMPLATE } from "./template";
+import type { AddressGroups } from "./schema";
+import {
+  PREDEFINED_EMAIL_TEMPLATE,
+  PredefinedEmailTemplate,
+} from "./template";
 
-export interface PredefinedEmailInput {
+export interface PredefinedEmailInput extends AddressGroups {
   sender: {
     email: string;
     name: string;
   };
   replyTo?: string;
-  to: string[];
-  cc: string[];
-  bcc: string[];
+  /** Sends only this envelope subset while retaining the complete visible headers. */
+  deliveryRecipients?: string[];
 }
 
 interface SendPredefinedEmailOptions {
@@ -32,42 +37,12 @@ async function wait(milliseconds: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+function addressKey(address: string): string {
+  return address.toLocaleLowerCase("en-US");
+}
+
 function allRecipients(input: PredefinedEmailInput): string[] {
   return [...input.to, ...input.cc, ...input.bcc];
-}
-
-function deliverySummaryFromCompletedSend(
-  recipients: string[],
-  result: Extract<ProviderSendResult, { status: "completed" }>,
-): DeliverySummary {
-  const accepted = new Set(
-    result.accepted.map((address) => address.toLocaleLowerCase("en-US")),
-  );
-  const recipientResults: RecipientDeliveryResult[] = recipients.map(
-    (recipient) =>
-      accepted.has(recipient.toLocaleLowerCase("en-US"))
-        ? {
-            recipient,
-            status: "accepted",
-            providerMessageId: result.messageId,
-          }
-        : {
-            recipient,
-            status: "failed",
-            reason: "provider_rejected",
-          },
-  );
-
-  return summarize(recipientResults);
-}
-
-function failedDeliverySummary(
-  recipients: string[],
-  reason: "delivery_status_unknown" | "provider_rejected" | "temporary_provider_failure",
-): DeliverySummary {
-  return summarize(
-    recipients.map((recipient) => ({ recipient, status: "failed", reason })),
-  );
 }
 
 function summarize(recipients: RecipientDeliveryResult[]): DeliverySummary {
@@ -82,6 +57,18 @@ function summarize(recipients: RecipientDeliveryResult[]): DeliverySummary {
   };
 }
 
+function failureReason(
+  failureKind: Extract<ProviderSendResult, { status: "failed" }>["failureKind"],
+) {
+  if (failureKind === "permanent") {
+    return "provider_rejected" as const;
+  }
+
+  return failureKind === "uncertain"
+    ? ("delivery_status_unknown" as const)
+    : ("temporary_provider_failure" as const);
+}
+
 export async function sendPredefinedEmail({
   provider,
   input,
@@ -89,39 +76,115 @@ export async function sendPredefinedEmail({
   retryDelayMs = DEFAULT_RETRY_DELAY_MS,
 }: SendPredefinedEmailOptions): Promise<DeliverySummary> {
   const recipients = allRecipients(input);
-  const message: ProviderMessage = {
-    ...input,
+  const deliveryRecipientKeys = input.deliveryRecipients
+    ? new Set(input.deliveryRecipients.map(addressKey))
+    : null;
+  const targetRecipients = deliveryRecipientKeys
+    ? recipients.filter((recipient) => deliveryRecipientKeys.has(addressKey(recipient)))
+    : recipients;
+  const html = await render(PredefinedEmailTemplate());
+  const baseMessage: ProviderMessage = {
+    sender: input.sender,
+    replyTo: input.replyTo,
+    to: input.to,
+    cc: input.cc,
+    bcc: input.bcc,
     subject: PREDEFINED_EMAIL_TEMPLATE.subject,
-    html: PREDEFINED_EMAIL_TEMPLATE.html,
+    html,
     text: PREDEFINED_EMAIL_TEMPLATE.text,
   };
   const attempts = Math.max(1, maximumAttempts);
+  const resolved = new Map<string, RecipientDeliveryResult>();
+  let pendingRecipients = targetRecipients;
 
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+  for (let attempt = 1; attempt <= attempts && pendingRecipients.length > 0; attempt += 1) {
+    const restrictEnvelope =
+      input.deliveryRecipients !== undefined ||
+      pendingRecipients.length !== recipients.length;
+    const message: ProviderMessage = {
+      ...baseMessage,
+      ...(restrictEnvelope ? { envelopeRecipients: pendingRecipients } : {}),
+    };
     let result: ProviderSendResult;
 
     try {
       result = await provider.send(message);
     } catch {
-      return failedDeliverySummary(recipients, "delivery_status_unknown");
+      for (const recipient of pendingRecipients) {
+        resolved.set(addressKey(recipient), {
+          recipient,
+          status: "failed",
+          reason: "delivery_status_unknown",
+        });
+      }
+      break;
     }
 
-    if (result.status === "completed") {
-      return deliverySummaryFromCompletedSend(recipients, result);
+    if (result.status === "failed") {
+      if (result.failureKind === "temporary" && attempt < attempts) {
+        await wait(Math.max(0, retryDelayMs) * 2 ** (attempt - 1));
+        continue;
+      }
+
+      for (const recipient of pendingRecipients) {
+        resolved.set(addressKey(recipient), {
+          recipient,
+          status: "failed",
+          reason: failureReason(result.failureKind),
+        });
+      }
+      break;
     }
 
-    if (result.failureKind === "permanent") {
-      return failedDeliverySummary(recipients, "provider_rejected");
+    const accepted = new Set(result.accepted.map(addressKey));
+    const rejected = new Map(
+      result.rejected.map((rejection) => [
+        addressKey(rejection.recipient),
+        rejection.failureKind,
+      ]),
+    );
+    const nextPending: string[] = [];
+
+    for (const recipient of pendingRecipients) {
+      const key = addressKey(recipient);
+      if (accepted.has(key)) {
+        resolved.set(key, {
+          recipient,
+          status: "accepted",
+          providerMessageId: result.messageId,
+        });
+        continue;
+      }
+
+      if (rejected.get(key) === "temporary" && attempt < attempts) {
+        nextPending.push(recipient);
+        continue;
+      }
+
+      resolved.set(key, {
+        recipient,
+        status: "failed",
+        reason:
+          rejected.get(key) === "temporary"
+            ? "temporary_provider_failure"
+            : "provider_rejected",
+      });
     }
 
-    if (result.failureKind === "uncertain") {
-      return failedDeliverySummary(recipients, "delivery_status_unknown");
-    }
-
-    if (attempt < attempts) {
+    pendingRecipients = nextPending;
+    if (pendingRecipients.length > 0) {
       await wait(Math.max(0, retryDelayMs) * 2 ** (attempt - 1));
     }
   }
 
-  return failedDeliverySummary(recipients, "temporary_provider_failure");
+  return summarize(
+    targetRecipients.map(
+      (recipient) =>
+        resolved.get(addressKey(recipient)) ?? {
+          recipient,
+          status: "failed",
+          reason: "delivery_status_unknown",
+        },
+    ),
+  );
 }

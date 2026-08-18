@@ -38,7 +38,9 @@ describe("executeSendEmailWorkflow", () => {
       status: "completed",
       messageId: "message-1",
       accepted: ["first@example.com", "audit@example.com"],
-      rejected: ["second@example.com"],
+      rejected: [
+        { recipient: "second@example.com", failureKind: "permanent" },
+      ],
     }));
     const dependencies = createDependencies({ send });
 

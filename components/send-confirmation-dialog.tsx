@@ -11,6 +11,10 @@ interface SendConfirmationDialogProps {
   toCount: number;
 }
 
+function formatAddressCount(count: number, label: string): string {
+  return `${count} ${label} ${count === 1 ? "address" : "addresses"}`;
+}
+
 export function SendConfirmationDialog({
   bccCount,
   ccCount,
@@ -39,7 +43,7 @@ export function SendConfirmationDialog({
       ref={dialogRef}
       aria-describedby="send-confirmation-description"
       aria-labelledby="send-confirmation-title"
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-3xl border border-black/10 bg-white p-0 text-slate-950 shadow-2xl backdrop:bg-slate-950/50 backdrop:backdrop-blur-sm"
+      className="m-auto w-[calc(100%_-_2rem)] max-w-md rounded-3xl border border-black/10 bg-white p-0 text-slate-950 shadow-2xl backdrop:bg-slate-950/50 backdrop:backdrop-blur-sm"
       onCancel={(event) => {
         event.preventDefault();
         onCancel();
@@ -77,10 +81,10 @@ export function SendConfirmationDialog({
           id="send-confirmation-description"
           className="mt-2 text-sm leading-6 text-slate-600"
         >
-          {toCount} To and {ccCount} CC addresses will be visible in the message.
-          {" "}
-          {bccCount} BCC addresses will remain hidden. The configured template
-          will be sent exactly as defined in code.
+          Every recipient can see {formatAddressCount(toCount, "To")} and{" "}
+          {formatAddressCount(ccCount, "CC")} in the message headers. The{" "}
+          {formatAddressCount(bccCount, "BCC")} will remain hidden. The configured
+          template will be sent exactly as defined in code.
         </p>
         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button

@@ -50,3 +50,4 @@ next-env.d.ts
 # local recipient lists
 /data/*.csv
 !/data/*.csv.example
+/data/.email-send-ledger.json

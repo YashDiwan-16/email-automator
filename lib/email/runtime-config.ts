@@ -19,6 +19,10 @@ const emailRuntimeEnvironmentSchema = z
       .enum(["true", "false"])
       .default("false")
       .transform((value) => value === "true"),
+    SMTP_REQUIRE_TLS: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
     SMTP_USER: z.string().trim().min(1),
     SMTP_PASSWORD: z.string().min(1),
     MAIL_FROM_EMAIL: z.email(),
@@ -41,6 +45,7 @@ export interface EmailRuntimeConfiguration {
     host?: string;
     port: number;
     secure: boolean;
+    requireTls: boolean;
     user: string;
     password: string;
   };
@@ -59,7 +64,7 @@ export class EnvironmentConfigurationError extends Error {
 }
 
 export function getEmailRuntimeConfiguration(
-  environment: NodeJS.ProcessEnv = process.env,
+  environment: NodeJS.ProcessEnv,
 ): EmailRuntimeConfiguration {
   const result = emailRuntimeEnvironmentSchema.safeParse(environment);
 
@@ -73,6 +78,7 @@ export function getEmailRuntimeConfiguration(
       host: result.data.SMTP_HOST,
       port: result.data.SMTP_PORT,
       secure: result.data.SMTP_SECURE,
+      requireTls: result.data.SMTP_REQUIRE_TLS,
       user: result.data.SMTP_USER,
       password: result.data.SMTP_PASSWORD,
     },

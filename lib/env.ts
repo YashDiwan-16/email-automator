@@ -10,7 +10,7 @@ import {
 export { EnvironmentConfigurationError };
 
 export function getServerEnvironment() {
-  const runtime = getEmailRuntimeConfiguration();
+  const runtime = getEmailRuntimeConfiguration(process.env);
   const accessToken = z.string().min(32).max(256).safeParse(
     process.env.EMAIL_AUTOMATOR_ACCESS_TOKEN,
   );

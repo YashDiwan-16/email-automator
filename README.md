@@ -16,11 +16,13 @@ Courier is an authorized email-dispatch app built with Next.js 16 and Nodemailer
 - `components/email-composer.tsx` is the React Hook Form client boundary.
 - `app/actions/send-email.ts` is the protected same-origin Server Action.
 - `lib/email/workflow.ts` authenticates, validates, rate-limits, and idempotently dispatches browser submissions.
-- `lib/email/service.ts` applies the predefined template and implements conservative SMTP retry behavior.
+- `lib/email/service.ts` renders the predefined React Email template and implements conservative SMTP retry behavior.
 - `lib/email/nodemailer-provider.ts` adapts Nodemailer results and SMTP errors to the application delivery model.
-- `lib/email/csv-email-source.ts` validates CSV rows and sends them with bounded concurrency.
+- `lib/email/csv-email-source.ts` parses and validates CSV rows.
+- `lib/email/csv-email-batch.ts` sends validated rows with bounded concurrency.
+- `lib/email/csv-delivery-ledger.ts` checkpoints accepted CSV recipients as non-identifying hashes for safe resume.
 - `scripts/send-emails.ts` is the `pnpm send` command entry point.
-- `lib/email/template.ts` contains the predefined subject, plain-text body, HTML body, and template version.
+- `lib/email/template.tsx` contains the predefined React Email body, plain-text alternative, subject, and template version.
 
 Nodemailer credentials are read only by the Server Action or local command. They are never exposed to browser code.
 
@@ -46,6 +48,7 @@ Replace the placeholders in `.env.local`:
 | `SMTP_HOST` | SMTP hostname; required when `SMTP_SERVICE` is empty |
 | `SMTP_PORT` | SMTP port, normally `587` for STARTTLS or `465` for implicit TLS |
 | `SMTP_SECURE` | `true` for implicit TLS on port 465; otherwise `false` |
+| `SMTP_REQUIRE_TLS` | Defaults to `true`; requires STARTTLS when the connection is not already encrypted |
 | `SMTP_USER` | SMTP username |
 | `SMTP_PASSWORD` | SMTP password or provider-issued app password |
 | `MAIL_FROM_EMAIL` | Authorized sender email address |
@@ -53,13 +56,13 @@ Replace the placeholders in `.env.local`:
 | `MAIL_REPLY_TO` | Optional fixed reply-to address |
 | `EMAIL_AUTOMATOR_ACCESS_TOKEN` | Random 32–256 character secret required by browser sends |
 
-When `SMTP_SERVICE` is set, Nodemailer chooses that service’s connection settings and the custom host, port, and secure values are not used. For a custom SMTP server, leave `SMTP_SERVICE` empty and set `SMTP_HOST`, `SMTP_PORT`, and `SMTP_SECURE`.
+When `SMTP_SERVICE` is set, Nodemailer chooses that service’s connection settings and the custom host, port, and secure values are not used. For a custom SMTP server, leave `SMTP_SERVICE` empty and set `SMTP_HOST`, `SMTP_PORT`, and `SMTP_SECURE`. Keep `SMTP_REQUIRE_TLS=true`; set it to `false` only for a deliberately unencrypted local test server.
 
 Gmail can be convenient for local testing with OAuth2 or an app password, but use a transactional SMTP provider for production automation. Keep all credentials in the deployment platform’s encrypted environment store and never prefix them with `NEXT_PUBLIC_`.
 
 ## Edit the predefined template
 
-Edit `lib/email/template.ts`. Update its `version` whenever subject or body content changes; the browser idempotency fingerprint includes that version.
+Edit `lib/email/template.tsx`. Update its `version` whenever subject or body content changes; browser fingerprints and CSV resume keys include that version.
 
 The form intentionally does not accept a subject or message body. This prevents operators from bypassing the approved template.
 
@@ -90,6 +93,12 @@ The filename may also be passed without `.csv`:
 pnpm send recipients
 ```
 
+Successful recipients are checkpointed in `data/.email-send-ledger.json`. Re-running the same command resumes only recipients that were not previously accepted. To deliberately resend the current template to every CSV recipient:
+
+```bash
+pnpm send recipients.csv --force
+```
+
 CSV format:
 
 ```csv
@@ -108,6 +117,7 @@ Rules:
 - Every row is validated before delivery. If any row is invalid, the command reports row-level errors and sends nothing.
 - CSV files must be inside `data/`; path traversal and non-CSV input are rejected.
 - `data/*.csv` is ignored by Git, while `data/*.csv.example` remains tracked.
+- The ignored delivery ledger contains only SHA-256 keys, not email addresses, and is updated atomically after each completed row.
 - The command uses SMTP credentials directly and does not require the browser access token.
 
 The command exits non-zero when validation fails or any recipient is not accepted. An SMTP acceptance response is not proof of inbox delivery.
@@ -121,7 +131,7 @@ pnpm test
 pnpm build
 ```
 
-Tests mock the provider and never contact a real SMTP server. They cover address grouping and deduplication, Nodemailer result/error mapping, predefined-template delivery, conservative retries, CSV parsing and concurrency, authorization, rate limiting, partial failures, and idempotent browser replay.
+Tests mock the provider and never contact a real SMTP server. They cover address grouping and deduplication, Nodemailer result/error mapping, predefined-template delivery, recipient-safe retries, CSV parsing, concurrency and resume, authorization, rate limiting, partial failures, and idempotent browser replay.
 
 ## Security and delivery behavior
 
@@ -131,7 +141,7 @@ Tests mock the provider and never contact a real SMTP server. They cover address
 - Sender headers and email content are not accepted from the browser or CSV.
 - The browser permits five unique submissions per authorized identity per 10-minute process-local window.
 - Successful browser results are cached by submission fingerprint for 15 minutes to reduce accidental duplicates.
-- Explicit SMTP 4xx failures are retried up to three total attempts with exponential backoff.
+- Explicit SMTP 4xx failures are retried up to three total attempts with exponential backoff. After partial acceptance, only temporarily rejected envelope recipients are retried; accepted recipients are not retransmitted.
 - Permanent SMTP rejection is not retried. Ambiguous transport failures are also not automatically retried because the server may already have accepted the message.
 - Provider diagnostics, credentials, and message bodies are not returned to the browser.
 
@@ -141,6 +151,6 @@ Tests mock the provider and never contact a real SMTP server. They cover address
 - CSV: 1,000 rows, 2 MB per file, and 10 unique recipients per row.
 - CSV delivery: up to three rows in flight.
 - Browser rate-limit and idempotency state are process-local and reset on restart. Replace them with atomic shared storage before multi-instance deployment.
-- Nodemailer/SMTP has no universal provider idempotency key. Re-running a CSV can resend rows that succeeded previously. For durable campaigns, add a persistent job ledger before sending at larger volume.
+- CSV resume uses a local hashed ledger, and `--force` deliberately bypasses prior acceptance. Nodemailer/SMTP still has no universal provider idempotency key, so a machine crash after SMTP acceptance but before the row checkpoint can cause a duplicate. Use a provider-backed durable job ledger for larger campaigns.
 - SMTP acceptance is not delivery. Production systems should process provider bounce and complaint events, maintain suppression lists, and monitor reputation.
 - Use this only for expected, consent-based email. Bulk or marketing messages may require unsubscribe handling, consent records, sender identification, and jurisdiction-specific compliance controls.

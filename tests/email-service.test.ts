@@ -72,7 +72,9 @@ describe("sendPredefinedEmail", () => {
       status: "completed",
       messageId: "message-1",
       accepted: ["primary@example.com", "hidden@example.com"],
-      rejected: ["visible@example.com"],
+      rejected: [
+        { recipient: "visible@example.com", failureKind: "permanent" },
+      ],
     }));
 
     const result = await sendPredefinedEmail({ provider, input: baseInput });
@@ -111,6 +113,43 @@ describe("sendPredefinedEmail", () => {
 
     expect(send).toHaveBeenCalledTimes(2);
     expect(result.acceptedCount).toBe(3);
+  });
+
+  it("retries only temporarily rejected recipients without resending accepted ones", async () => {
+    const messages: ProviderMessage[] = [];
+    const send = vi.fn<EmailProvider["send"]>(async (message) => {
+      messages.push(message);
+
+      if (messages.length === 1) {
+        return {
+          status: "completed",
+          messageId: "message-1",
+          accepted: ["primary@example.com", "hidden@example.com"],
+          rejected: [
+            { recipient: "visible@example.com", failureKind: "temporary" },
+          ],
+        };
+      }
+
+      return {
+        status: "completed",
+        messageId: "message-2",
+        accepted: ["visible@example.com"],
+        rejected: [],
+      };
+    });
+
+    const result = await sendPredefinedEmail({
+      provider: { send },
+      input: baseInput,
+      retryDelayMs: 0,
+    });
+
+    expect(messages).toHaveLength(2);
+    expect(messages[0]?.envelopeRecipients).toBeUndefined();
+    expect(messages[1]?.envelopeRecipients).toEqual(["visible@example.com"]);
+    expect(result.acceptedCount).toBe(3);
+    expect(result.failedCount).toBe(0);
   });
 
   it.each(["permanent", "uncertain"] as const)(

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { NodemailerEmailProvider } from "@/lib/email/nodemailer-provider";
+import {
+  createSmtpTransportOptions,
+  NodemailerEmailProvider,
+} from "@/lib/email/nodemailer-provider";
 import type { ProviderMessage } from "@/lib/email/provider";
 
 const message: ProviderMessage = {
@@ -15,11 +18,32 @@ const message: ProviderMessage = {
 };
 
 describe("NodemailerEmailProvider", () => {
+  it("requires TLS upgrade for custom SMTP by default configuration", () => {
+    expect(
+      createSmtpTransportOptions({
+        host: "smtp.example.com",
+        port: 587,
+        secure: false,
+        requireTls: true,
+        user: "sender@example.com",
+        password: "secret",
+      }),
+    ).toMatchObject({
+      host: "smtp.example.com",
+      port: 587,
+      secure: false,
+      requireTLS: true,
+    });
+  });
+
   it("passes all address groups to Nodemailer and preserves partial acceptance", async () => {
     const sendMail = vi.fn().mockResolvedValue({
       messageId: "smtp-message-1",
       accepted: ["primary@example.com", "hidden@example.com"],
       rejected: ["visible@example.com"],
+      rejectedErrors: [
+        { recipient: "visible@example.com", responseCode: 451 },
+      ],
     });
     const provider = new NodemailerEmailProvider({ sendMail });
 
@@ -39,7 +63,9 @@ describe("NodemailerEmailProvider", () => {
       status: "completed",
       messageId: "smtp-message-1",
       accepted: ["primary@example.com", "hidden@example.com"],
-      rejected: ["visible@example.com"],
+      rejected: [
+        { recipient: "visible@example.com", failureKind: "temporary" },
+      ],
     });
   });
 
@@ -68,5 +94,26 @@ describe("NodemailerEmailProvider", () => {
 
     expect(result).toEqual({ status: "failed", failureKind: "uncertain" });
     expect(JSON.stringify(result)).not.toContain("must-not-escape");
+  });
+
+  it("preserves per-recipient failures when every envelope recipient is rejected", async () => {
+    const sendMail = vi.fn().mockRejectedValue(
+      Object.assign(new Error("all rejected"), {
+        rejected: ["primary@example.com"],
+        rejectedErrors: [
+          { recipient: "primary@example.com", responseCode: 450 },
+        ],
+      }),
+    );
+    const provider = new NodemailerEmailProvider({ sendMail });
+
+    await expect(provider.send(message)).resolves.toEqual({
+      status: "completed",
+      messageId: "unknown",
+      accepted: [],
+      rejected: [
+        { recipient: "primary@example.com", failureKind: "temporary" },
+      ],
+    });
   });
 });

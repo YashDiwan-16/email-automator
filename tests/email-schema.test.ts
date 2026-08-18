@@ -77,6 +77,22 @@ describe("emailComposerSchema", () => {
     );
   });
 
+  it("reports address errors alongside access-token errors", () => {
+    const result = emailComposerSchema.safeParse({
+      ...validInput,
+      accessToken: "",
+      to: "",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.accessToken).toContain(
+      "Enter your access token.",
+    );
+    expect(result.error?.flatten().fieldErrors.to).toContain(
+      "Enter at least one valid To address.",
+    );
+  });
+
   it("associates invalid addresses with their field", () => {
     const result = emailComposerSchema.safeParse({
       ...validInput,
