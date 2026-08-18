@@ -123,7 +123,7 @@ const EMAIL_SIGNATURE = {
 
 /** Update the version whenever the approved subject or body changes. */
 export const PREDEFINED_EMAIL_TEMPLATE = {
-  version: "2026-08-18.4",
+  version: "2026-08-18.5",
   subject: "EduDeca – Invitation to Participate",
   preview:
     "Invitation for Class XI & XII students: EduDeca – India's Wiz360 Knowledge Challenge.",
@@ -193,7 +193,7 @@ export function createPredefinedEmailContent(
     signature.closing,
     signature.name,
     signature.organization,
-    `Designation - ${signature.designation}`,
+    signature.designation,
     signature.email,
     signature.mobile,
   ].join("\n");
@@ -453,29 +453,33 @@ export function PredefinedEmailTemplate({
               <strong>think, apply and grow</strong>.
             </Text>
             <Hr style={styles.signatureDivider} />
-            <Row>
-              <Column style={styles.monogramColumn} valign="top">
-                <Text style={styles.monogram}>S</Text>
-              </Column>
-              <Column valign="top">
-                <Text style={styles.signatureClosing}>
-                  {content.signature.closing}
-                </Text>
-                <Text style={styles.signatureName}>{content.signature.name}</Text>
-                <Text style={styles.signatureOrganization}>
-                  {content.signature.organization}
-                </Text>
-                <Text style={styles.signatureMeta}>
-                  Designation - {content.signature.designation}
-                </Text>
-                <Text style={styles.signatureMeta}>
-                  {content.signature.email}
-                </Text>
-                <Text style={styles.signatureMeta}>
-                  {content.signature.mobile}
-                </Text>
-              </Column>
-            </Row>
+            <Section style={styles.signatureCard}>
+              <Row>
+                <Column style={styles.monogramColumn} valign="top">
+                  <Text style={styles.monogram}>MS</Text>
+                </Column>
+                <Column valign="top">
+                  <Text style={styles.signatureClosing}>
+                    {content.signature.closing}
+                  </Text>
+                  <Text style={styles.signatureName}>
+                    {content.signature.name}
+                  </Text>
+                  <Text style={styles.signatureOrganization}>
+                    {content.signature.organization}
+                  </Text>
+                  <Text style={styles.signatureRole}>
+                    {content.signature.designation}
+                  </Text>
+                  <Text style={styles.signatureContact}>
+                    {content.signature.email}
+                  </Text>
+                  <Text style={styles.signatureContact}>
+                    {content.signature.mobile}
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
           </Section>
 
           <Section style={styles.footer}>
@@ -791,30 +795,41 @@ const styles = {
     borderColor: BRAND.line,
     margin: "25px 0 21px",
   },
-  monogramColumn: { width: "54px" },
+  signatureCard: {
+    backgroundColor: "#F8FAFC",
+    border: `1px solid ${BRAND.line}`,
+    borderLeft: `4px solid ${BRAND.orange}`,
+    borderRadius: "12px",
+    padding: "20px",
+  },
+  monogramColumn: { width: "66px" },
   monogram: {
-    backgroundColor: BRAND.ink,
-    borderRadius: "8px",
+    backgroundColor: BRAND.orangeSoft,
+    border: `1px solid ${BRAND.orange}`,
+    borderRadius: "12px",
     color: BRAND.orange,
-    fontSize: "22px",
+    fontSize: "17px",
     fontWeight: "800",
-    height: "42px",
-    lineHeight: "42px",
+    height: "50px",
+    lineHeight: "50px",
     margin: "0",
     textAlign: "center" as const,
-    width: "42px",
+    width: "50px",
   },
   signatureClosing: {
     color: BRAND.muted,
-    fontSize: "12px",
-    lineHeight: "17px",
-    margin: "0 0 2px",
+    fontSize: "10px",
+    fontWeight: "700",
+    letterSpacing: "1px",
+    lineHeight: "15px",
+    margin: "0 0 4px",
+    textTransform: "uppercase" as const,
   },
   signatureName: {
     color: BRAND.ink,
-    fontSize: "18px",
+    fontSize: "20px",
     fontWeight: "800",
-    lineHeight: "23px",
+    lineHeight: "25px",
     margin: "0",
   },
   signatureOrganization: {
@@ -824,11 +839,18 @@ const styles = {
     lineHeight: "19px",
     margin: "1px 0 0",
   },
-  signatureMeta: {
+  signatureRole: {
+    color: BRAND.ink,
+    fontSize: "12px",
+    fontWeight: "700",
+    lineHeight: "18px",
+    margin: "5px 0 2px",
+  },
+  signatureContact: {
     color: BRAND.muted,
     fontSize: "11px",
     lineHeight: "17px",
-    margin: "2px 0 0",
+    margin: "1px 0 0",
   },
   footer: {
     backgroundColor: BRAND.ink,

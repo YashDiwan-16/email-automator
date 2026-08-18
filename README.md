@@ -21,7 +21,7 @@ send a real email.
 
 The approved email is the EduDeca – Wiz360 college introduction and invitation.
 The `university` value replaces the recipient college/school placeholder. Its
-default closing is fixed as Mr. Sankar, RDM University, Designation - Principal,
+default closing is fixed as Mr. Sankar, RDM University, Principal,
 `alexis36sg@gmail.com`, and `8010354828`. These closing details are not entered
 through the browser or CSV.
 
