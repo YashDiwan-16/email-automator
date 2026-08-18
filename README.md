@@ -30,7 +30,7 @@ Nodemailer credentials are read only by the Server Action or local command. They
 
 - Node.js 20 or newer
 - pnpm 10.6.2
-- An SMTP account or a provider supported by Nodemailer’s well-known services
+- An SMTP account, such as Gmail SMTP with an app password
 
 ## Install and configure
 
@@ -44,19 +44,14 @@ Replace the placeholders in `.env.local`:
 
 | Variable | Purpose |
 | --- | --- |
-| `SMTP_SERVICE` | Optional Nodemailer well-known service name, such as `Gmail` or `Outlook365` |
-| `SMTP_HOST` | SMTP hostname; required when `SMTP_SERVICE` is empty |
-| `SMTP_PORT` | SMTP port, normally `587` for STARTTLS or `465` for implicit TLS |
-| `SMTP_SECURE` | `true` for implicit TLS on port 465; otherwise `false` |
-| `SMTP_REQUIRE_TLS` | Defaults to `true`; requires STARTTLS when the connection is not already encrypted |
-| `SMTP_USER` | SMTP username |
-| `SMTP_PASSWORD` | SMTP password or provider-issued app password |
-| `MAIL_FROM_EMAIL` | Authorized sender email address |
-| `MAIL_FROM_NAME` | Fixed sender display name |
-| `MAIL_REPLY_TO` | Optional fixed reply-to address |
+| `EMAIL_SERVER_HOST` | SMTP hostname, such as `smtp.gmail.com` |
+| `EMAIL_SERVER_PORT` | SMTP port; `465` enables implicit TLS, while other ports require STARTTLS |
+| `EMAIL_SERVER_USER` | SMTP username, normally the Gmail address |
+| `EMAIL_SERVER_PASSWORD` | SMTP password or Gmail app password |
+| `EMAIL_ADMIN` | Fixed From and Reply-To email address; displayed as `Email Admin` |
 | `EMAIL_AUTOMATOR_ACCESS_TOKEN` | Random 32–256 character secret required by browser sends |
 
-When `SMTP_SERVICE` is set, Nodemailer chooses that service’s connection settings and the custom host, port, and secure values are not used. For a custom SMTP server, leave `SMTP_SERVICE` empty and set `SMTP_HOST`, `SMTP_PORT`, and `SMTP_SECURE`. Keep `SMTP_REQUIRE_TLS=true`; set it to `false` only for a deliberately unencrypted local test server.
+Port `465` uses an implicit TLS connection. Other ports use SMTP with a required STARTTLS upgrade; the app will not silently continue over plaintext.
 
 Gmail can be convenient for local testing with OAuth2 or an app password, but use a transactional SMTP provider for production automation. Keep all credentials in the deployment platform’s encrypted environment store and never prefix them with `NEXT_PUBLIC_`.
 
