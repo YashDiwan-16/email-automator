@@ -54,9 +54,9 @@ describe("sendPredefinedEmail", () => {
     });
     expect(messages[0]?.text).toContain("Dear Principal / Head of Institution,");
     expect(messages[0]?.text).toContain(
-      "We invite XYZ University to express interest in participating in EduDeca – Wiz360",
+      "We invite XYZ University to express interest in participating in EduDeca – Whiz360",
     );
-    expect(messages[0]?.text).toContain("What does Wiz360 test?");
+    expect(messages[0]?.text).toContain("What does Whiz360 test?");
     expect(messages[0]?.text).toContain("The 10-level journey");
     expect(messages[0]?.text).toContain(
       "Why should your institution participate?",
@@ -64,18 +64,24 @@ describe("sendPredefinedEmail", () => {
     expect(messages[0]?.text).toContain("₹10 lakh first prize");
     expect(messages[0]?.text).toContain("28 Aug 2026");
     expect(messages[0]?.text).toContain(
-      "Warm Regards\nMr. Sankar\nRDM University\nPrincipal\nalexis36sg@gmail.com\n8010354828",
+      "Warm Regards\nMr. Sankar\nEduDeca – Whiz360\nalexis36sg@gmail.com",
     );
+    expect(messages[0]?.text).not.toContain("RDM University");
+    expect(messages[0]?.text).not.toContain("Principal\n");
+    expect(messages[0]?.text).not.toContain("8010354828");
+    expect(messages[0]?.text).not.toContain("Wiz360");
     expect(messages[0]?.text).not.toContain("Designation");
     expect(messages[0]?.text).not.toContain("{{");
     expect(messages[0]?.html).toContain("Dear Principal / Head of Institution");
     expect(messages[0]?.html).toContain("XYZ University");
     expect(messages[0]?.html).toContain("Mr. Sankar");
     expect(messages[0]?.html).not.toContain(">MS<");
-    expect(messages[0]?.html).toContain("Principal");
     expect(messages[0]?.html).not.toContain("Designation");
     expect(messages[0]?.html).toContain("alexis36sg@gmail.com");
-    expect(messages[0]?.html).toContain("8010354828");
+    expect(messages[0]?.html).toContain("EduDeca – Whiz360");
+    expect(messages[0]?.html).not.toContain("RDM University");
+    expect(messages[0]?.html).not.toContain("8010354828");
+    expect(messages[0]?.html).not.toContain("Wiz360");
     expect(messages[0]?.html).not.toContain("{{");
     expect(result).toEqual({
       acceptedCount: 3,

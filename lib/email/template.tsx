@@ -115,18 +115,16 @@ const KEY_DATES = [
 const EMAIL_SIGNATURE = {
   closing: "Warm Regards",
   name: "Mr. Sankar",
-  organization: "RDM University",
-  designation: "Principal",
+  organization: "EduDeca – Whiz360",
   email: "alexis36sg@gmail.com",
-  mobile: "8010354828",
 } as const;
 
 /** Update the version whenever the approved subject or body changes. */
 export const PREDEFINED_EMAIL_TEMPLATE = {
-  version: "2026-08-18.6",
+  version: "2026-08-18.7",
   subject: "EduDeca – Invitation to Participate",
   preview:
-    "Invitation for Class XI & XII students: EduDeca – India's Wiz360 Knowledge Challenge.",
+    "Invitation for Class XI & XII students: EduDeca – India's Whiz360 Knowledge Challenge.",
 } as const;
 
 export interface PredefinedEmailTemplateInput {
@@ -149,7 +147,7 @@ export function createPredefinedEmailContent(
   const text = [
     "Dear Principal / Head of Institution,",
     "",
-    `We invite ${personalization.university} to express interest in participating in EduDeca – Wiz360, a 360° Knowledge Challenge for Class XI and XII students across India.`,
+    `We invite ${personalization.university} to express interest in participating in EduDeca – Whiz360, a 360° Knowledge Challenge for Class XI and XII students across India.`,
     "",
     "The objective is to create a prestigious, scalable platform that rewards academic depth while also testing aptitude, analytical ability, entrepreneurship, financial literacy, general knowledge and consistency. It encourages students to look beyond bookish knowledge and rote learning.",
     "",
@@ -157,7 +155,7 @@ export function createPredefinedEmailContent(
     "Where is the national stage for India's Whizkids?",
     "EduDeca is an All-India academic decathlon designed to discover students who can think, reason, solve, connect ideas and lead — not merely reproduce what they have memorised.",
     "",
-    "What does Wiz360 test?",
+    "What does Whiz360 test?",
     ...CHALLENGE_AREAS.flatMap((area) => [
       area.title,
       ...formatDetails(area.details),
@@ -193,9 +191,7 @@ export function createPredefinedEmailContent(
     signature.closing,
     signature.name,
     signature.organization,
-    signature.designation,
     signature.email,
-    signature.mobile,
   ].join("\n");
 
   return {
@@ -257,7 +253,7 @@ export function PredefinedEmailTemplate({
                   Edu<span style={styles.wordmarkAccent}>Deca</span>
                 </Text>
                 <Text style={styles.tagline}>
-                  INDIA&apos;S WIZ360 KNOWLEDGE CHALLENGE
+                  INDIA&apos;S WHIZ360 KNOWLEDGE CHALLENGE
                 </Text>
               </Column>
               <Column align="right" style={styles.audienceColumn}>
@@ -290,7 +286,7 @@ export function PredefinedEmailTemplate({
             </Text>
             <Text style={styles.paragraph}>
               We invite <strong>{content.university}</strong> to express interest
-              in participating in <strong>EduDeca – Wiz360</strong>, a 360°
+              in participating in <strong>EduDeca – Whiz360</strong>, a 360°
               Knowledge Challenge for Class XI and XII students across India.
             </Text>
             <Text style={styles.paragraphLast}>
@@ -303,7 +299,7 @@ export function PredefinedEmailTemplate({
           </Section>
 
           <Section className="email-pad" style={styles.contentSection}>
-            <SectionHeading eyebrow="01 · THE CHALLENGE" title="What does Wiz360 test?" />
+            <SectionHeading eyebrow="01 · THE CHALLENGE" title="What does Whiz360 test?" />
             <Row>
               {content.challengeAreas.map((area, index) => (
                 <Column
@@ -461,14 +457,8 @@ export function PredefinedEmailTemplate({
               <Text style={styles.signatureOrganization}>
                 {content.signature.organization}
               </Text>
-              <Text style={styles.signatureRole}>
-                {content.signature.designation}
-              </Text>
               <Text style={styles.signatureContact}>
                 {content.signature.email}
-              </Text>
-              <Text style={styles.signatureContact}>
-                {content.signature.mobile}
               </Text>
             </Section>
           </Section>
@@ -476,7 +466,7 @@ export function PredefinedEmailTemplate({
           <Section style={styles.footer}>
             <Text style={styles.footerBrand}>
               Edu<span style={styles.wordmarkAccent}>Deca</span>{" "}
-              <span style={styles.footerDivider}>/</span> Wiz360
+              <span style={styles.footerDivider}>/</span> Whiz360
             </Text>
             <Text style={styles.footerText}>
               Discovering India&apos;s next generation of all-round thinkers.
@@ -815,13 +805,6 @@ const styles = {
     fontWeight: "700",
     lineHeight: "19px",
     margin: "1px 0 0",
-  },
-  signatureRole: {
-    color: BRAND.ink,
-    fontSize: "12px",
-    fontWeight: "700",
-    lineHeight: "18px",
-    margin: "5px 0 2px",
   },
   signatureContact: {
     color: BRAND.muted,
