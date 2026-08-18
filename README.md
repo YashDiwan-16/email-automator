@@ -53,7 +53,9 @@ EMAIL_SERVER_PORT=465
 EMAIL_SERVER_USER=your-email@gmail.com
 EMAIL_SERVER_PASSWORD=your-16-character-app-password
 EMAIL_ADMIN=your-email@gmail.com
-EMAIL_AUTOMATOR_ACCESS_TOKEN=your-private-browser-token
+EMAIL_AUTOMATOR_USERNAME=admin
+EMAIL_AUTOMATOR_PASSWORD=your-strong-browser-password
+EMAIL_AUTOMATOR_SESSION_SECRET=your-random-session-secret
 ```
 
 Important:
@@ -63,14 +65,15 @@ Important:
 - Never commit or share `.env.local`.
 - If an App Password is exposed, revoke it and create a new one.
 
-`EMAIL_AUTOMATOR_ACCESS_TOKEN` protects the browser interface. Generate a
-private token with:
+The three `EMAIL_AUTOMATOR_*` variables protect the browser interface with a
+username, password, and signed session cookie. The password must contain at
+least 12 characters. Generate the session secret with:
 
 ```bash
 openssl rand -base64 32
 ```
 
-The CSV script does not require the browser access token.
+The CSV script does not require the browser authentication variables.
 
 ## Send your first CSV email
 
@@ -247,9 +250,14 @@ Start the development server:
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Enter the private browser
-token, university, To addresses, and optional CC/BCC addresses. Review the
-confirmation before sending.
+Open [http://localhost:3000](http://localhost:3000). The app redirects you to
+`/login`. Sign in with `EMAIL_AUTOMATOR_USERNAME` and
+`EMAIL_AUTOMATOR_PASSWORD`, then enter the university, To addresses, and
+optional CC/BCC addresses. Review the confirmation before sending.
+
+The browser session is stored in a signed, HTTP-only cookie and expires after
+eight hours. Use **Log out** when you finish. The login page is rate-limited to
+five attempts per username every 15 minutes.
 
 ## Limits and safety
 

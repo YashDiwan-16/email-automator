@@ -7,7 +7,6 @@ import {
 } from "@/lib/email/schema";
 
 const validInput = {
-  accessToken: "a-secure-access-token-value",
   university: "XYZ University",
   to: "first@example.com",
   cc: "",
@@ -99,17 +98,22 @@ describe("emailComposerSchema", () => {
     );
   });
 
-  it("reports address errors alongside access-token errors", () => {
+  it("does not carry browser credentials in the email payload", () => {
+    const result = emailComposerSchema.parse({
+      ...validInput,
+      accessToken: "browser-credentials-belong-in-the-session",
+    });
+
+    expect(result).not.toHaveProperty("accessToken");
+  });
+
+  it("reports address errors", () => {
     const result = emailComposerSchema.safeParse({
       ...validInput,
-      accessToken: "",
       to: "",
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.flatten().fieldErrors.accessToken).toContain(
-      "Enter your access token.",
-    );
     expect(result.error?.flatten().fieldErrors.to).toContain(
       "Enter at least one valid To address.",
     );

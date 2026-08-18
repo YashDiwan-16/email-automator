@@ -2,7 +2,6 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import { createAccessIdentity, isAuthorizedAccessToken } from "@/lib/auth";
 import { InMemoryIdempotencyStore } from "@/lib/idempotency";
 import { FixedWindowRateLimiter } from "@/lib/rate-limit";
 import type { DeliverySummary, SendEmailActionResult } from "@/types/email";
@@ -17,21 +16,12 @@ import {
 import { PREDEFINED_EMAIL_TEMPLATE } from "./template";
 
 export interface EmailWorkflowDependencies {
-  expectedAccessToken: string;
+  authenticatedIdentity: string | null;
   idempotencyStore: InMemoryIdempotencyStore;
   provider: EmailProvider;
   rateLimiter: FixedWindowRateLimiter;
   sender: EmailSender;
   replyTo?: string;
-}
-
-function readAccessToken(input: unknown): string | null {
-  if (typeof input !== "object" || input === null) {
-    return null;
-  }
-
-  const accessToken = Reflect.get(input, "accessToken");
-  return typeof accessToken === "string" ? accessToken : null;
 }
 
 function createSubmissionFingerprint(input: PredefinedEmailInput): string {
@@ -70,14 +60,7 @@ export async function executeSendEmailWorkflow(
   input: unknown,
   dependencies: EmailWorkflowDependencies,
 ): Promise<SendEmailActionResult> {
-  const providedAccessToken = readAccessToken(input);
-  if (
-    !providedAccessToken ||
-    !isAuthorizedAccessToken(
-      providedAccessToken,
-      dependencies.expectedAccessToken,
-    )
-  ) {
+  if (!dependencies.authenticatedIdentity) {
     return {
       status: "error",
       code: "unauthorized",
@@ -96,9 +79,8 @@ export async function executeSendEmailWorkflow(
   }
 
   const validatedInput = validationResult.data;
-  const accessIdentity = createAccessIdentity(providedAccessToken);
   const rateLimit = dependencies.rateLimiter.consume(
-    accessIdentity,
+    dependencies.authenticatedIdentity,
     validatedInput.idempotencyKey,
   );
   if (!rateLimit.allowed) {
@@ -120,7 +102,7 @@ export async function executeSendEmailWorkflow(
   };
   const fingerprint = createSubmissionFingerprint(deliveryInput);
   const idempotencyResult = await dependencies.idempotencyStore.run(
-    `${accessIdentity}:${validatedInput.idempotencyKey}`,
+    `${dependencies.authenticatedIdentity}:${validatedInput.idempotencyKey}`,
     fingerprint,
     () =>
       sendPredefinedEmail({

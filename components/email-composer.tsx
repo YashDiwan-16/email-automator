@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
@@ -18,7 +19,6 @@ import type { SendEmailActionResult } from "@/types/email";
 import { SendConfirmationDialog } from "./send-confirmation-dialog";
 
 const defaultValues: EmailComposerInput = {
-  accessToken: "",
   university: "",
   to: "",
   cc: "",
@@ -27,7 +27,6 @@ const defaultValues: EmailComposerInput = {
 };
 
 const fieldNames = new Set<EmailComposerField>([
-  "accessToken",
   "university",
   "to",
   "cc",
@@ -160,8 +159,8 @@ function AddressField({
 }
 
 export function EmailComposer({ templateSubject }: { templateSubject: string }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [isTokenVisible, setIsTokenVisible] = useState(false);
   const [pendingSubmission, setPendingSubmission] =
     useState<EmailComposerInput | null>(null);
   const [result, setResult] = useState<SendEmailActionResult | null>(null);
@@ -214,13 +213,17 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
         setResult(actionResult);
 
         if (actionResult.status === "error") {
+          if (actionResult.code === "unauthorized") {
+            router.replace("/login");
+            return;
+          }
+
           applyServerFieldErrors(actionResult.fieldErrors);
           return;
         }
 
         reset({
           ...defaultValues,
-          accessToken: values.accessToken,
           idempotencyKey: createIdempotencyKey(),
         });
       } catch {
@@ -274,47 +277,6 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
               The university is inserted into the approved EduDeca invitation.
               All other content and sender details are fixed in code.
             </p>
-          </div>
-
-          <div className="mb-7 rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
-            <label
-              htmlFor="accessToken"
-              className="text-sm font-semibold text-slate-900"
-            >
-              Access token
-            </label>
-            <p id="accessToken-help" className="mt-1 text-xs leading-5 text-slate-600">
-              Required for every browser send and never persisted by this app.
-            </p>
-            <div className="relative">
-              <input
-                id="accessToken"
-                type={isTokenVisible ? "text" : "password"}
-                autoComplete="current-password"
-                aria-describedby={`accessToken-help${errors.accessToken ? " accessToken-error" : ""}`}
-                aria-invalid={Boolean(errors.accessToken)}
-                className={`${inputClassName} pr-16`}
-                disabled={isPending}
-                placeholder="Enter your private token"
-                {...register("accessToken")}
-              />
-              <button
-                type="button"
-                aria-label={isTokenVisible ? "Hide access token" : "Show access token"}
-                className="absolute right-2.5 top-1/2 mt-1 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
-                onClick={() => setIsTokenVisible((visible) => !visible)}
-              >
-                {isTokenVisible ? "Hide" : "Show"}
-              </button>
-            </div>
-            {errors.accessToken ? (
-              <p
-                id="accessToken-error"
-                className="mt-1.5 text-xs font-medium text-red-600"
-              >
-                {errors.accessToken.message}
-              </p>
-            ) : null}
           </div>
 
           <div className="space-y-5">

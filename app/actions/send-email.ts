@@ -5,6 +5,7 @@ import { createNodemailerEmailProvider } from "@/lib/email/nodemailer-provider";
 import { executeSendEmailWorkflow } from "@/lib/email/workflow";
 import { InMemoryIdempotencyStore } from "@/lib/idempotency";
 import { FixedWindowRateLimiter } from "@/lib/rate-limit";
+import { readAuthenticatedSession } from "@/lib/session";
 import type { SendEmailActionResult } from "@/types/email";
 
 const rateLimiter = new FixedWindowRateLimiter({
@@ -20,11 +21,20 @@ const idempotencyStore = new InMemoryIdempotencyStore({
 export async function sendEmail(
   input: unknown,
 ): Promise<SendEmailActionResult> {
+  const session = await readAuthenticatedSession();
+  if (!session) {
+    return {
+      status: "error",
+      code: "unauthorized",
+      message: "Your session has expired. Sign in again.",
+    };
+  }
+
   try {
     const environment = getServerEnvironment();
 
     return await executeSendEmailWorkflow(input, {
-      expectedAccessToken: environment.accessToken,
+      authenticatedIdentity: session.identity,
       idempotencyStore,
       provider: createNodemailerEmailProvider(environment.smtp),
       rateLimiter,

@@ -194,10 +194,6 @@ export const emailAddressGroupsSchema = rawAddressGroupsSchema
   .transform((input) => resolveAddressGroups(input).groups);
 
 const rawEmailComposerSchema = rawAddressGroupsSchema.extend({
-  accessToken: z
-    .string()
-    .min(16, { error: "Enter your access token." })
-    .max(256, { error: "The access token is too long." }),
   university: universityNameSchema,
   idempotencyKey: z.uuid({ error: "Start a new send and try again." }),
 });
@@ -208,7 +204,6 @@ export const emailComposerSchema = rawEmailComposerSchema
   })
   .transform((input) => {
     return {
-      accessToken: input.accessToken,
       personalization: { university: input.university },
       ...resolveAddressGroups(input).groups,
       idempotencyKey: input.idempotencyKey,

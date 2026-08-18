@@ -5,10 +5,9 @@ import { executeSendEmailWorkflow } from "@/lib/email/workflow";
 import { InMemoryIdempotencyStore } from "@/lib/idempotency";
 import { FixedWindowRateLimiter } from "@/lib/rate-limit";
 
-const ACCESS_TOKEN = "test-access-token-with-32-characters";
+const AUTHENTICATED_IDENTITY = "authenticated-browser-user";
 
 const validInput = {
-  accessToken: ACCESS_TOKEN,
   university: "XYZ University",
   to: "first@example.com",
   cc: "second@example.com",
@@ -16,12 +15,16 @@ const validInput = {
   idempotencyKey: "9f1e4648-138f-4472-9913-11aebf646956",
 };
 
-function createDependencies(provider: EmailProvider, maximumRequests = 5) {
+function createDependencies(
+  provider: EmailProvider,
+  maximumRequests = 5,
+  authenticatedIdentity: string | null = AUTHENTICATED_IDENTITY,
+) {
   return {
+    authenticatedIdentity,
     provider,
     sender: { email: "updates@example.com", name: "Product team" },
     replyTo: "reply@example.com",
-    expectedAccessToken: ACCESS_TOKEN,
     rateLimiter: new FixedWindowRateLimiter({
       maximumRequests,
       windowMs: 60_000,
@@ -82,12 +85,9 @@ describe("executeSendEmailWorkflow", () => {
 
   it("rejects unauthorized requests before validation or provider access", async () => {
     const send = vi.fn<EmailProvider["send"]>();
-    const dependencies = createDependencies({ send });
+    const dependencies = createDependencies({ send }, 5, null);
 
-    const result = await executeSendEmailWorkflow(
-      { accessToken: "incorrect-token" },
-      dependencies,
-    );
+    const result = await executeSendEmailWorkflow({}, dependencies);
 
     expect(result).toEqual({
       status: "error",

@@ -1,7 +1,16 @@
+import { redirect } from "next/navigation";
+
+import { logout } from "@/app/actions/auth";
 import { EmailComposer } from "@/components/email-composer";
 import { PREDEFINED_EMAIL_TEMPLATE } from "@/lib/email/template";
+import { readAuthenticatedSession } from "@/lib/session";
 
-export default function Home() {
+export default async function Home() {
+  const session = await readAuthenticatedSession();
+  if (!session) {
+    redirect("/login");
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f7f7f4] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-50 [background-image:linear-gradient(to_right,#e8e8e2_1px,transparent_1px),linear-gradient(to_bottom,#e8e8e2_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_75%)]" />
@@ -22,9 +31,19 @@ export default function Home() {
               <p className="text-xs text-slate-500">Secure email dispatch</p>
             </div>
           </div>
-          <div className="hidden items-center gap-2 text-xs font-medium text-slate-500 sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" />
-            Protected workspace
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 text-xs font-medium text-slate-500 sm:flex">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" />
+              Signed in securely
+            </div>
+            <form action={logout}>
+              <button
+                type="submit"
+                className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+              >
+                Log out
+              </button>
+            </form>
           </div>
         </header>
 
