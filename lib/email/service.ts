@@ -86,10 +86,7 @@ export async function sendPredefinedEmail({
     contactEmail,
     personalization: input.personalization,
   };
-  const content = createPredefinedEmailContent(
-    templateInput.personalization,
-    templateInput.contactEmail,
-  );
+  const content = createPredefinedEmailContent(templateInput.personalization);
   const html = await render(PredefinedEmailTemplate(templateInput));
   const baseMessage: ProviderMessage = {
     sender: input.sender,

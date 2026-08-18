@@ -40,10 +40,7 @@ describe("sendPredefinedEmail", () => {
     });
 
     const result = await sendPredefinedEmail({ provider, input: baseInput });
-    const content = createPredefinedEmailContent(
-      baseInput.personalization,
-      baseInput.replyTo,
-    );
+    const content = createPredefinedEmailContent(baseInput.personalization);
 
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({
@@ -67,14 +64,16 @@ describe("sendPredefinedEmail", () => {
     expect(messages[0]?.text).toContain("₹10 lakh first prize");
     expect(messages[0]?.text).toContain("28 Aug 2026");
     expect(messages[0]?.text).toContain(
-      "Warm regards,\nSankar\nEduDeca – Wiz360\nPrincipal | reply@example.com",
+      "Warm Regards\nMr. Sankar\nRDM University\nDesignation - Principal\nalexis36sg@gmail.com\n8010354828",
     );
     expect(messages[0]?.text).not.toContain("{{");
     expect(messages[0]?.html).toContain("Dear Principal / Head of Institution");
     expect(messages[0]?.html).toContain("XYZ University");
-    expect(messages[0]?.html).toContain("Sankar");
+    expect(messages[0]?.html).toContain("Mr. Sankar");
+    expect(messages[0]?.html).toContain("Designation -");
     expect(messages[0]?.html).toContain("Principal");
-    expect(messages[0]?.html).toContain("EduDeca");
+    expect(messages[0]?.html).toContain("alexis36sg@gmail.com");
+    expect(messages[0]?.html).toContain("8010354828");
     expect(messages[0]?.html).not.toContain("{{");
     expect(result).toEqual({
       acceptedCount: 3,

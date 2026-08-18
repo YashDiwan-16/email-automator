@@ -113,15 +113,17 @@ const KEY_DATES = [
 ] as const;
 
 const EMAIL_SIGNATURE = {
-  closing: "Warm regards,",
-  name: "Sankar",
-  organization: "EduDeca – Wiz360",
+  closing: "Warm Regards",
+  name: "Mr. Sankar",
+  organization: "RDM University",
   designation: "Principal",
+  email: "alexis36sg@gmail.com",
+  mobile: "8010354828",
 } as const;
 
 /** Update the version whenever the approved subject or body changes. */
 export const PREDEFINED_EMAIL_TEMPLATE = {
-  version: "2026-08-18.3",
+  version: "2026-08-18.4",
   subject: "EduDeca – Invitation to Participate",
   preview:
     "Invitation for Class XI & XII students: EduDeca – India's Wiz360 Knowledge Challenge.",
@@ -142,9 +144,8 @@ function formatDetails(
 
 export function createPredefinedEmailContent(
   personalization: EmailPersonalization,
-  contactEmail: string,
 ) {
-  const signature = { ...EMAIL_SIGNATURE, email: contactEmail };
+  const signature = EMAIL_SIGNATURE;
   const text = [
     "Dear Principal / Head of Institution,",
     "",
@@ -192,7 +193,9 @@ export function createPredefinedEmailContent(
     signature.closing,
     signature.name,
     signature.organization,
-    `${signature.designation} | ${signature.email}`,
+    `Designation - ${signature.designation}`,
+    signature.email,
+    signature.mobile,
   ].join("\n");
 
   return {
@@ -228,7 +231,7 @@ export function PredefinedEmailTemplate({
   contactEmail,
   personalization,
 }: PredefinedEmailTemplateInput) {
-  const content = createPredefinedEmailContent(personalization, contactEmail);
+  const content = createPredefinedEmailContent(personalization);
   const replyHref = `mailto:${contactEmail}?subject=EduDeca%20-%20Interest%20to%20Participate`;
 
   return (
@@ -463,7 +466,13 @@ export function PredefinedEmailTemplate({
                   {content.signature.organization}
                 </Text>
                 <Text style={styles.signatureMeta}>
-                  {content.signature.designation} · {content.signature.email}
+                  Designation - {content.signature.designation}
+                </Text>
+                <Text style={styles.signatureMeta}>
+                  {content.signature.email}
+                </Text>
+                <Text style={styles.signatureMeta}>
+                  {content.signature.mobile}
                 </Text>
               </Column>
             </Row>

@@ -20,9 +20,10 @@ The email subject and message are stored in
 send a real email.
 
 The approved email is the EduDeca – Wiz360 college introduction and invitation.
-The `university` value replaces the recipient college/school placeholder. The
-message is signed by Sankar for EduDeca – Wiz360, and the contact email comes
-from `EMAIL_ADMIN`. Sender details are not entered through the browser or CSV.
+The `university` value replaces the recipient college/school placeholder. Its
+default closing is fixed as Mr. Sankar, RDM University, Designation - Principal,
+`alexis36sg@gmail.com`, and `8010354828`. These closing details are not entered
+through the browser or CSV.
 
 Each CSV row creates a separate email:
 
