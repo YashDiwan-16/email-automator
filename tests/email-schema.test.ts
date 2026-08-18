@@ -4,6 +4,7 @@ import {
   emailComposerSchema,
   MAX_RECIPIENTS,
   parseAddressList,
+  tokenizeAddressList,
 } from "@/lib/email/schema";
 
 const validInput = {
@@ -15,6 +16,19 @@ const validInput = {
 };
 
 describe("parseAddressList", () => {
+  it("tokenizes pasted recipient lists for chip inputs", () => {
+    expect(
+      tokenizeAddressList(
+        " first@example.com, second@example.com; broken-address\nthird@example.com ",
+      ),
+    ).toEqual([
+      "first@example.com",
+      "second@example.com",
+      "broken-address",
+      "third@example.com",
+    ]);
+  });
+
   it("splits comma, semicolon, and newline separated addresses", () => {
     expect(
       parseAddressList(

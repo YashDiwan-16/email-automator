@@ -63,20 +63,22 @@ export interface ParsedAddressList {
   invalidAddresses: string[];
 }
 
+export function tokenizeAddressList(value: string): string[] {
+  return value
+    .split(/[,;\r\n]/u)
+    .map((candidate) => candidate.trim())
+    .filter(Boolean);
+}
+
 export function parseAddressList(value: string): ParsedAddressList {
   const addresses: string[] = [];
   const invalidAddresses: string[] = [];
   const seen = new Set<string>();
 
-  for (const candidate of value.split(/[,;\r\n]/u)) {
-    const trimmed = candidate.trim();
-    if (!trimmed) {
-      continue;
-    }
-
-    const parsed = normalizedEmailSchema.safeParse(trimmed);
+  for (const candidate of tokenizeAddressList(value)) {
+    const parsed = normalizedEmailSchema.safeParse(candidate);
     if (!parsed.success) {
-      invalidAddresses.push(trimmed);
+      invalidAddresses.push(candidate);
       continue;
     }
 

@@ -2,8 +2,20 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import {
+  type KeyboardEvent,
+  type Ref,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
+import {
+  type Control,
+  Controller,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 
 import { sendEmail } from "@/app/actions/send-email";
 import {
@@ -13,6 +25,7 @@ import {
   MAX_RECIPIENTS,
   normalizeAddressGroups,
   parseAddressList,
+  tokenizeAddressList,
 } from "@/lib/email/schema";
 import type { SendEmailActionResult } from "@/types/email";
 
@@ -103,24 +116,195 @@ function ResultNotice({ result }: { result: SendEmailActionResult }) {
 }
 
 interface AddressFieldProps {
+  control: Control<EmailComposerInput>;
   description: string;
   disabled: boolean;
   error?: string;
   label: string;
   name: "to" | "cc" | "bcc";
   placeholder: string;
-  register: ReturnType<typeof useForm<EmailComposerInput>>["register"];
   required?: boolean;
 }
 
+interface RecipientChipInputProps {
+  describedBy: string;
+  disabled: boolean;
+  hasError: boolean;
+  id: string;
+  inputRef: Ref<HTMLInputElement>;
+  onBlur: () => void;
+  onChange: (value: string) => void;
+  placeholder: string;
+  value: string;
+}
+
+function normalizeChip(candidate: string): string {
+  const parsed = parseAddressList(candidate);
+  return parsed.invalidAddresses.length === 0 && parsed.addresses.length === 1
+    ? (parsed.addresses[0] as string)
+    : candidate.trim();
+}
+
+function isValidChip(candidate: string): boolean {
+  const parsed = parseAddressList(candidate);
+  return parsed.invalidAddresses.length === 0 && parsed.addresses.length === 1;
+}
+
+function mergeChips(existing: string[], candidates: string[]): string[] {
+  const merged = [...existing];
+  const seen = new Set(
+    existing.map((candidate) => candidate.toLocaleLowerCase("en-US")),
+  );
+
+  for (const candidate of candidates.map(normalizeChip).filter(Boolean)) {
+    const key = candidate.toLocaleLowerCase("en-US");
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(candidate);
+    }
+  }
+
+  return merged;
+}
+
+function RecipientChipInput({
+  describedBy,
+  disabled,
+  hasError,
+  id,
+  inputRef,
+  onBlur,
+  onChange,
+  placeholder,
+  value,
+}: RecipientChipInputProps) {
+  const [draft, setDraft] = useState("");
+  const chips = useMemo(() => tokenizeAddressList(value), [value]);
+
+  function updateChips(nextChips: string[]): void {
+    onChange(nextChips.join(", "));
+  }
+
+  function addChips(candidates: string[]): void {
+    updateChips(mergeChips(chips, candidates));
+  }
+
+  function commitDraft(): void {
+    const candidates = tokenizeAddressList(draft);
+    if (candidates.length > 0) {
+      addChips(candidates);
+    }
+    setDraft("");
+  }
+
+  function handleDraftChange(nextDraft: string): void {
+    if (!/[,;\r\n]/u.test(nextDraft)) {
+      setDraft(nextDraft);
+      return;
+    }
+
+    const pieces = nextDraft.split(/[,;\r\n]/u);
+    const endsWithSeparator = /[,;\r\n]\s*$/u.test(nextDraft);
+    const remainder = endsWithSeparator ? "" : (pieces.pop() ?? "");
+    addChips(pieces);
+    setDraft(remainder.trimStart());
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (
+      event.key === "Enter" ||
+      event.key === "," ||
+      event.key === ";" ||
+      event.key === "Tab"
+    ) {
+      if (draft.trim()) {
+        if (event.key !== "Tab") {
+          event.preventDefault();
+        }
+        commitDraft();
+      }
+      return;
+    }
+
+    if (event.key === "Backspace" && !draft && chips.length > 0) {
+      updateChips(chips.slice(0, -1));
+    }
+  }
+
+  function removeChip(index: number): void {
+    updateChips(chips.filter((_, chipIndex) => chipIndex !== index));
+  }
+
+  return (
+    <div
+      className={`mt-2 flex min-h-13 w-full flex-wrap items-center gap-2 rounded-xl border bg-white px-3 py-2 shadow-sm outline-none transition focus-within:ring-4 disabled:bg-slate-50 ${
+        hasError
+          ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-500/10"
+          : "border-slate-200 hover:border-slate-300 focus-within:border-violet-500 focus-within:ring-violet-500/10"
+      } ${disabled ? "cursor-not-allowed bg-slate-50" : ""}`}
+    >
+      {chips.map((chip, index) => {
+        const isValid = isValidChip(chip);
+
+        return (
+          <span
+            key={`${chip.toLocaleLowerCase("en-US")}-${index}`}
+            className={`inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-2.5 pr-1.5 text-sm font-medium ring-1 ${
+              isValid
+                ? "bg-violet-50 text-violet-800 ring-violet-200"
+                : "bg-red-50 text-red-800 ring-red-200"
+            }`}
+            title={isValid ? chip : "Invalid email address"}
+          >
+            <span className="max-w-60 truncate">{chip}</span>
+            <button
+              type="button"
+              aria-label={`Remove ${chip}`}
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-base leading-none transition ${
+                isValid
+                  ? "text-violet-500 hover:bg-violet-200 hover:text-violet-900"
+                  : "text-red-500 hover:bg-red-200 hover:text-red-900"
+              }`}
+              disabled={disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => removeChip(index)}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </span>
+        );
+      })}
+      <input
+        ref={inputRef}
+        id={id}
+        type="email"
+        inputMode="email"
+        autoComplete="off"
+        aria-describedby={describedBy}
+        aria-invalid={hasError}
+        className="min-h-8 min-w-36 flex-1 border-0 bg-transparent px-1 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
+        disabled={disabled}
+        placeholder={chips.length > 0 ? "Add another…" : placeholder}
+        value={draft}
+        onBlur={() => {
+          commitDraft();
+          onBlur();
+        }}
+        onChange={(event) => handleDraftChange(event.target.value)}
+        onKeyDown={handleKeyDown}
+      />
+    </div>
+  );
+}
+
 function AddressField({
+  control,
   description,
   disabled,
   error,
   label,
   name,
   placeholder,
-  register,
   required = false,
 }: AddressFieldProps) {
   const helpId = `${name}-help`;
@@ -139,15 +323,22 @@ function AddressField({
       <p id={helpId} className="mt-1 text-xs leading-5 text-slate-500">
         {description}
       </p>
-      <textarea
-        id={name}
-        rows={2}
-        aria-describedby={`${helpId}${error ? ` ${errorId}` : ""}`}
-        aria-invalid={Boolean(error)}
-        className={`${inputClassName} min-h-20 resize-y leading-6`}
-        disabled={disabled}
-        placeholder={placeholder}
-        {...register(name)}
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <RecipientChipInput
+            describedBy={`${helpId}${error ? ` ${errorId}` : ""}`}
+            disabled={disabled}
+            hasError={Boolean(error)}
+            id={name}
+            inputRef={field.ref}
+            placeholder={placeholder}
+            value={field.value}
+            onBlur={field.onBlur}
+            onChange={field.onChange}
+          />
+        )}
       />
       {error ? (
         <p id={errorId} className="mt-1.5 text-xs font-medium text-red-600">
@@ -315,33 +506,33 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
               ) : null}
             </div>
             <AddressField
+              control={control}
               required
               name="to"
               label="To"
-              description="Visible to every recipient. Separate addresses with commas, semicolons, or new lines."
-              placeholder="alex@example.com; jordan@example.com"
+              description="Visible to every recipient. Press Enter or type a comma after each address."
+              placeholder="alex@example.com"
               disabled={isPending}
               error={errors.to?.message}
-              register={register}
             />
             <div className="grid gap-5 sm:grid-cols-2">
               <AddressField
+                control={control}
                 name="cc"
                 label="CC"
-                description="Visible in the message headers to every recipient."
+                description="Visible in the message headers. Paste or enter multiple addresses."
                 placeholder="manager@example.com"
                 disabled={isPending}
                 error={errors.cc?.message}
-                register={register}
               />
               <AddressField
+                control={control}
                 name="bcc"
                 label="BCC"
-                description="Delivered without exposing these addresses."
+                description="Hidden from other recipients. Paste or enter multiple addresses."
                 placeholder="audit@example.com"
                 disabled={isPending}
                 error={errors.bcc?.message}
-                register={register}
               />
             </div>
           </div>
