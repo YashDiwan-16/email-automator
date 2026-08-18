@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import type Mail from "nodemailer/lib/mailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
 
+import type { SmtpTransportConfiguration } from "./configuration";
 import type {
   EmailProvider,
   ProviderMessage,
@@ -17,16 +18,6 @@ interface NodemailerDeliveryInfo {
 
 export interface NodemailerTransport {
   sendMail(message: Mail.Options): Promise<NodemailerDeliveryInfo>;
-}
-
-export interface SmtpTransportConfiguration {
-  service?: string;
-  host?: string;
-  port: number;
-  secure: boolean;
-  requireTls: boolean;
-  user: string;
-  password: string;
 }
 
 function normalizeDeliveredAddresses(values: unknown[] | undefined): string[] {

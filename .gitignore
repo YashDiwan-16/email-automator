@@ -51,3 +51,4 @@ next-env.d.ts
 /data/*.csv
 !/data/*.csv.example
 /data/.email-send-ledger.json
+/data/.email-send-ledger.json.*.tmp

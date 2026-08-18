@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import type {
+  EmailSender,
+  SmtpTransportConfiguration,
+} from "./configuration";
+
 const optionalNonEmptyString = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().trim().min(1).optional(),
@@ -40,19 +45,8 @@ const emailRuntimeEnvironmentSchema = z
   });
 
 export interface EmailRuntimeConfiguration {
-  smtp: {
-    service?: string;
-    host?: string;
-    port: number;
-    secure: boolean;
-    requireTls: boolean;
-    user: string;
-    password: string;
-  };
-  sender: {
-    email: string;
-    name: string;
-  };
+  smtp: SmtpTransportConfiguration;
+  sender: EmailSender;
   replyTo?: string;
 }
 

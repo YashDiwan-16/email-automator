@@ -7,6 +7,7 @@ import { InMemoryIdempotencyStore } from "@/lib/idempotency";
 import { FixedWindowRateLimiter } from "@/lib/rate-limit";
 import type { DeliverySummary, SendEmailActionResult } from "@/types/email";
 
+import type { EmailSender } from "./configuration";
 import type { EmailProvider } from "./provider";
 import { emailComposerSchema } from "./schema";
 import {
@@ -20,10 +21,7 @@ export interface EmailWorkflowDependencies {
   idempotencyStore: InMemoryIdempotencyStore;
   provider: EmailProvider;
   rateLimiter: FixedWindowRateLimiter;
-  sender: {
-    email: string;
-    name: string;
-  };
+  sender: EmailSender;
   replyTo?: string;
 }
 

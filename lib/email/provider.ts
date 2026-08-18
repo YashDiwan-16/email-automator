@@ -1,10 +1,8 @@
 import type { AddressGroups } from "./schema";
+import type { EmailSender } from "./configuration";
 
 export interface ProviderMessage extends AddressGroups {
-  sender: {
-    email: string;
-    name: string;
-  };
+  sender: EmailSender;
   replyTo?: string;
   subject: string;
   html: string;

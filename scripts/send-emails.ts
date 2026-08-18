@@ -4,6 +4,7 @@ import path from "node:path";
 import { loadEnvConfig } from "@next/env";
 
 import {
+  CsvDeliveryLedger,
   CsvDeliveryLedgerError,
   CsvDeliveryLedgerStore,
 } from "../lib/email/csv-delivery-ledger";
@@ -78,7 +79,17 @@ async function main(): Promise<void> {
   const ledgerStore = new CsvDeliveryLedgerStore(
     path.join(process.cwd(), "data", ".email-send-ledger.json"),
   );
-  const ledger = await ledgerStore.load();
+  let ledger: CsvDeliveryLedger;
+  try {
+    ledger = await ledgerStore.load();
+  } catch (error) {
+    if (!commandLine.force || !(error instanceof CsvDeliveryLedgerError)) {
+      throw error;
+    }
+
+    console.warn("The invalid delivery ledger will be replaced because --force was set.");
+    ledger = CsvDeliveryLedger.empty();
+  }
   const rows = ledger.plan(parsed.rows, ledgerContext, {
     force: commandLine.force,
   });

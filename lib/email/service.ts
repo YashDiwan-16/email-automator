@@ -2,6 +2,7 @@ import { render } from "react-email";
 
 import type { DeliverySummary, RecipientDeliveryResult } from "@/types/email";
 
+import type { EmailSender } from "./configuration";
 import type { EmailProvider, ProviderMessage, ProviderSendResult } from "./provider";
 import type { AddressGroups } from "./schema";
 import {
@@ -10,10 +11,7 @@ import {
 } from "./template";
 
 export interface PredefinedEmailInput extends AddressGroups {
-  sender: {
-    email: string;
-    name: string;
-  };
+  sender: EmailSender;
   replyTo?: string;
   /** Sends only this envelope subset while retaining the complete visible headers. */
   deliveryRecipients?: string[];

@@ -1,5 +1,6 @@
 import type { DeliverySummary } from "@/types/email";
 
+import type { EmailSender } from "./configuration";
 import type { CsvEmailRow } from "./csv-email-source";
 import type { EmailProvider } from "./provider";
 import { sendPredefinedEmail } from "./service";
@@ -21,10 +22,7 @@ export interface CsvEmailBatchSummary {
 
 interface SendCsvEmailBatchOptions {
   provider: EmailProvider;
-  sender: {
-    email: string;
-    name: string;
-  };
+  sender: EmailSender;
   replyTo?: string;
   rows: SendableCsvEmailRow[];
   concurrency?: number;
