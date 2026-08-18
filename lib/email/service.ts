@@ -4,7 +4,7 @@ import type { DeliverySummary, RecipientDeliveryResult } from "@/types/email";
 
 import type { EmailSender } from "./configuration";
 import type { EmailProvider, ProviderMessage, ProviderSendResult } from "./provider";
-import type { AddressGroups } from "./schema";
+import type { AddressGroups, EmailPersonalization } from "./schema";
 import {
   createPredefinedEmailContent,
   PredefinedEmailTemplate,
@@ -13,7 +13,7 @@ import {
 export interface PredefinedEmailInput extends AddressGroups {
   sender: EmailSender;
   replyTo?: string;
-  university: string;
+  personalization: EmailPersonalization;
   /** Sends only this envelope subset while retaining the complete visible headers. */
   deliveryRecipients?: string[];
 }
@@ -81,10 +81,8 @@ export async function sendPredefinedEmail({
   const targetRecipients = deliveryRecipientKeys
     ? recipients.filter((recipient) => deliveryRecipientKeys.has(addressKey(recipient)))
     : recipients;
-  const content = createPredefinedEmailContent(input.university);
-  const html = await render(
-    PredefinedEmailTemplate({ university: input.university }),
-  );
+  const content = createPredefinedEmailContent(input.personalization);
+  const html = await render(PredefinedEmailTemplate(input.personalization));
   const baseMessage: ProviderMessage = {
     sender: input.sender,
     replyTo: input.replyTo,

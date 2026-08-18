@@ -113,7 +113,7 @@ export async function executeSendEmailWorkflow(
   const deliveryInput: PredefinedEmailInput = {
     sender: dependencies.sender,
     replyTo: dependencies.replyTo,
-    university: validatedInput.university,
+    personalization: validatedInput.personalization,
     to: validatedInput.to,
     cc: validatedInput.cc,
     bcc: validatedInput.bcc,

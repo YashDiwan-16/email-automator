@@ -11,7 +11,14 @@ export const universityNameSchema = z
       .min(1, { error: "Enter the recipient university." })
       .max(150, { error: "Use 150 characters or fewer." })
       .regex(/^[^<>\r\n]*$/u, { error: "Enter a valid university name." }),
-  );
+  )
+  .brand<"UniversityName">();
+
+export type UniversityName = z.output<typeof universityNameSchema>;
+
+export interface EmailPersonalization {
+  university: UniversityName;
+}
 
 function normalizeDomain(domain: string): string {
   const lowerCasedDomain = domain.toLocaleLowerCase("en-US");
@@ -202,7 +209,7 @@ export const emailComposerSchema = rawEmailComposerSchema
   .transform((input) => {
     return {
       accessToken: input.accessToken,
-      university: input.university,
+      personalization: { university: input.university },
       ...resolveAddressGroups(input).groups,
       idempotencyKey: input.idempotencyKey,
     };

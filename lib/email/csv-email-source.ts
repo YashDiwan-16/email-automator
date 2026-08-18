@@ -2,6 +2,7 @@ import { parse } from "csv-parse/sync";
 
 import {
   type AddressGroups,
+  type EmailPersonalization,
   emailAddressGroupsSchema,
   universityNameSchema,
 } from "./schema";
@@ -18,7 +19,7 @@ interface RawCsvRow {
 
 export interface CsvEmailRow extends AddressGroups {
   rowNumber: number;
-  university: string;
+  personalization: EmailPersonalization;
 }
 
 export interface CsvRowValidationError {
@@ -118,7 +119,7 @@ export function parseEmailCsv(contents: string): ParsedEmailCsv {
 
     rows.push({
       rowNumber,
-      university: parsedUniversity.data,
+      personalization: { university: parsedUniversity.data },
       ...parsedAddresses.data,
     });
   });

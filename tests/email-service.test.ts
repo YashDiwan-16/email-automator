@@ -5,13 +5,16 @@ import type {
   ProviderMessage,
   ProviderSendResult,
 } from "@/lib/email/provider";
+import { universityNameSchema } from "@/lib/email/schema";
 import { sendPredefinedEmail } from "@/lib/email/service";
 import { createPredefinedEmailContent } from "@/lib/email/template";
 
 const baseInput = {
   sender: { email: "updates@example.com", name: "Product team" },
   replyTo: "reply@example.com",
-  university: "XYZ University",
+  personalization: {
+    university: universityNameSchema.parse("XYZ University"),
+  },
   to: ["primary@example.com"],
   cc: ["visible@example.com"],
   bcc: ["hidden@example.com"],
@@ -37,7 +40,7 @@ describe("sendPredefinedEmail", () => {
     });
 
     const result = await sendPredefinedEmail({ provider, input: baseInput });
-    const content = createPredefinedEmailContent(baseInput.university);
+    const content = createPredefinedEmailContent(baseInput.personalization);
 
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({

@@ -60,7 +60,7 @@ describe("emailComposerSchema", () => {
       university: "  XYZ University  ",
     });
 
-    expect(result.university).toBe("XYZ University");
+    expect(result.personalization.university).toBe("XYZ University");
 
     for (const university of ["", "Unsafe\r\nBcc: hidden@example.com"]) {
       const invalidResult = emailComposerSchema.safeParse({
@@ -69,7 +69,9 @@ describe("emailComposerSchema", () => {
       });
 
       expect(invalidResult.success).toBe(false);
-      expect(invalidResult.error?.flatten().fieldErrors.university).toBeDefined();
+      expect(invalidResult.error?.issues).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: ["university"] })]),
+      );
     }
   });
 

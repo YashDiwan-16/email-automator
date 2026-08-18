@@ -5,10 +5,13 @@ import {
   type CsvDeliveryLedgerContext,
 } from "@/lib/email/csv-delivery-ledger";
 import type { CsvEmailRow } from "@/lib/email/csv-email-source";
+import { universityNameSchema } from "@/lib/email/schema";
 
 const row: CsvEmailRow = {
   rowNumber: 2,
-  university: "XYZ University",
+  personalization: {
+    university: universityNameSchema.parse("XYZ University"),
+  },
   to: ["primary@example.com"],
   cc: ["visible@example.com"],
   bcc: ["hidden@example.com"],
@@ -74,7 +77,17 @@ describe("CsvDeliveryLedger", () => {
       ledger.plan([row], { ...context, templateVersion: "template-v2" }),
     ).toHaveLength(1);
     expect(
-      ledger.plan([{ ...row, university: "Another University" }], context),
+      ledger.plan(
+        [
+          {
+            ...row,
+            personalization: {
+              university: universityNameSchema.parse("Another University"),
+            },
+          },
+        ],
+        context,
+      ),
     ).toHaveLength(1);
     expect(ledger.plan([row], context, { force: true })).toEqual([
       {

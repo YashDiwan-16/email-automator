@@ -9,38 +9,51 @@ import {
   Text,
 } from "react-email";
 
+import type { EmailPersonalization } from "./schema";
+
+const EMAIL_BODY = [
+  "We have something new to share with you.",
+  "Thank you for staying connected.",
+] as const;
+
+const EMAIL_SIGNATURE = {
+  closing: "Regards,",
+  name: "Sankar",
+  title: "Principal",
+  organization: "RDM University",
+} as const;
+
 /** Update the version whenever the approved subject or body changes. */
 export const PREDEFINED_EMAIL_TEMPLATE = {
   version: "2026-08-18.2",
-  subject: "A message from RDM University",
+  subject: `A message from ${EMAIL_SIGNATURE.organization}`,
 } as const;
 
-export function createPredefinedEmailContent(university: string) {
+export function createPredefinedEmailContent(
+  personalization: EmailPersonalization,
+) {
+  const greeting = `Dear ${personalization.university},`;
   return {
-    subject: `${PREDEFINED_EMAIL_TEMPLATE.subject} for ${university}`,
+    subject: `${PREDEFINED_EMAIL_TEMPLATE.subject} for ${personalization.university}`,
+    greeting,
+    body: EMAIL_BODY,
+    signature: EMAIL_SIGNATURE,
     text: [
-      `Dear ${university},`,
+      greeting,
       "",
-      "We have something new to share with you.",
-      "",
-      "Thank you for staying connected.",
-      "",
-      "Regards,",
-      "Sankar",
-      "Principal",
-      "RDM University",
+      ...EMAIL_BODY.flatMap((paragraph) => [paragraph, ""]),
+      EMAIL_SIGNATURE.closing,
+      EMAIL_SIGNATURE.name,
+      EMAIL_SIGNATURE.title,
+      EMAIL_SIGNATURE.organization,
     ].join("\n"),
   };
 }
 
-interface PredefinedEmailTemplateProps {
-  university: string;
-}
-
-export function PredefinedEmailTemplate({
-  university,
-}: PredefinedEmailTemplateProps) {
-  const content = createPredefinedEmailContent(university);
+export function PredefinedEmailTemplate(
+  personalization: EmailPersonalization,
+) {
+  const content = createPredefinedEmailContent(personalization);
 
   return (
     <Html lang="en" dir="ltr">
@@ -48,23 +61,29 @@ export function PredefinedEmailTemplate({
       <Preview>{content.subject}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
-          <Text style={styles.eyebrow}>RDM UNIVERSITY</Text>
+          <Text style={styles.eyebrow}>
+            {content.signature.organization.toLocaleUpperCase("en-US")}
+          </Text>
           <Heading as="h1" style={styles.heading}>
-            Dear {university},
+            {content.greeting}
           </Heading>
           <Hr style={styles.divider} />
-          <Text style={styles.message}>
-            We have something new to share with you.
-          </Text>
-          <Text style={styles.followUp}>Thank you for staying connected.</Text>
+          {content.body.map((paragraph, index) => (
+            <Text
+              key={paragraph}
+              style={index === 0 ? styles.message : styles.followUp}
+            >
+              {paragraph}
+            </Text>
+          ))}
           <Text style={styles.signOff}>
-            Regards,
+            {content.signature.closing}
             <br />
-            <strong>Sankar</strong>
+            <strong>{content.signature.name}</strong>
             <br />
-            Principal
+            {content.signature.title}
             <br />
-            RDM University
+            {content.signature.organization}
           </Text>
         </Container>
       </Body>

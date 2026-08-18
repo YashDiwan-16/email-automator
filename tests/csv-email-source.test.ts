@@ -6,6 +6,7 @@ import {
 } from "@/lib/email/csv-email-source";
 import { sendCsvEmailBatch } from "@/lib/email/csv-email-batch";
 import type { EmailProvider } from "@/lib/email/provider";
+import { universityNameSchema } from "@/lib/email/schema";
 
 describe("parseEmailCsv", () => {
   it("parses To, CC, and BCC cells with shared normalization and deduplication", () => {
@@ -17,14 +18,14 @@ second@example.com,ABC Institute,,hidden@example.com`);
       rows: [
         {
           rowNumber: 2,
-          university: "XYZ University",
+          personalization: { university: "XYZ University" },
           to: ["Owner@example.com"],
           cc: ["team@example.com"],
           bcc: ["audit@example.com"],
         },
         {
           rowNumber: 3,
-          university: "ABC Institute",
+          personalization: { university: "ABC Institute" },
           to: ["second@example.com"],
           cc: [],
           bcc: ["hidden@example.com"],
@@ -43,7 +44,7 @@ another@example.com,,,`);
     expect(result.rows).toEqual([
       {
         rowNumber: 2,
-        university: "Valid University",
+        personalization: { university: "Valid University" },
         to: ["valid@example.com"],
         cc: [],
         bcc: [],
@@ -138,7 +139,9 @@ three@example.com,Three University,,hidden@example.com`).rows;
       rows: [
         {
           rowNumber: 2,
-          university: "Resume University",
+          personalization: {
+            university: universityNameSchema.parse("Resume University"),
+          },
           to: ["already-sent@example.com"],
           cc: ["pending@example.com"],
           bcc: [],
