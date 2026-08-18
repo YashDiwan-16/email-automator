@@ -2,11 +2,7 @@ import "server-only";
 
 import { createHash, timingSafeEqual } from "node:crypto";
 
-import { jwtVerify, SignJWT } from "jose";
 import { z } from "zod";
-
-const SESSION_ISSUER = "email-automator";
-const SESSION_AUDIENCE = "email-automator-browser";
 
 const normalizedUsernameSchema = z
   .string()
@@ -18,43 +14,37 @@ export const loginCredentialsSchema = z.object({
   password: z.string().min(1).max(256),
 });
 
-const authenticationEnvironmentSchema = z.object({
+const credentialEnvironmentSchema = z.object({
   EMAIL_AUTOMATOR_USERNAME: normalizedUsernameSchema,
   EMAIL_AUTOMATOR_PASSWORD: z.string().min(12).max(256),
-  EMAIL_AUTOMATOR_SESSION_SECRET: z.string().min(32).max(512),
 });
 
-export interface AuthenticationConfiguration {
+export type LoginCredentials = z.output<typeof loginCredentialsSchema>;
+
+export interface CredentialConfiguration {
   username: string;
   password: string;
-  sessionSecret: string;
 }
 
-export interface AuthenticatedSession {
-  identity: string;
-  expiresAt: Date;
-}
-
-export class AuthenticationConfigurationError extends Error {
+export class CredentialConfigurationError extends Error {
   constructor() {
-    super("Browser authentication environment variables are invalid.");
-    this.name = "AuthenticationConfigurationError";
+    super("Browser credential environment variables are invalid.");
+    this.name = "CredentialConfigurationError";
   }
 }
 
-export function getAuthenticationConfiguration(
+export function getCredentialConfiguration(
   environment: Readonly<Record<string, string | undefined>>,
-): AuthenticationConfiguration {
-  const result = authenticationEnvironmentSchema.safeParse(environment);
+): CredentialConfiguration {
+  const result = credentialEnvironmentSchema.safeParse(environment);
 
   if (!result.success) {
-    throw new AuthenticationConfigurationError();
+    throw new CredentialConfigurationError();
   }
 
   return {
     username: result.data.EMAIL_AUTOMATOR_USERNAME,
     password: result.data.EMAIL_AUTOMATOR_PASSWORD,
-    sessionSecret: result.data.EMAIL_AUTOMATOR_SESSION_SECRET,
   };
 }
 
@@ -73,68 +63,19 @@ function createAuthenticatedIdentity(username: string): string {
 }
 
 export function authenticateCredentials(
-  input: z.input<typeof loginCredentialsSchema>,
-  configuration: AuthenticationConfiguration,
+  credentials: LoginCredentials,
+  configuration: CredentialConfiguration,
 ): string | null {
-  const result = loginCredentialsSchema.safeParse(input);
-  if (!result.success) {
-    return null;
-  }
-
   const usernameMatches = securelyMatches(
-    result.data.username,
+    credentials.username,
     configuration.username,
   );
   const passwordMatches = securelyMatches(
-    result.data.password,
+    credentials.password,
     configuration.password,
   );
 
   return usernameMatches && passwordMatches
     ? createAuthenticatedIdentity(configuration.username)
     : null;
-}
-
-function sessionKey(secret: string): Uint8Array {
-  return new TextEncoder().encode(secret);
-}
-
-export async function createSessionToken(
-  session: AuthenticatedSession,
-  secret: string,
-): Promise<string> {
-  return new SignJWT({})
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuer(SESSION_ISSUER)
-    .setAudience(SESSION_AUDIENCE)
-    .setSubject(session.identity)
-    .setIssuedAt()
-    .setExpirationTime(Math.floor(session.expiresAt.getTime() / 1_000))
-    .sign(sessionKey(secret));
-}
-
-export async function verifySessionToken(
-  token: string,
-  secret: string,
-  currentDate = new Date(),
-): Promise<AuthenticatedSession | null> {
-  try {
-    const { payload } = await jwtVerify(token, sessionKey(secret), {
-      algorithms: ["HS256"],
-      audience: SESSION_AUDIENCE,
-      issuer: SESSION_ISSUER,
-      currentDate,
-    });
-
-    if (!payload.sub || !payload.exp) {
-      return null;
-    }
-
-    return {
-      identity: payload.sub,
-      expiresAt: new Date(payload.exp * 1_000),
-    };
-  } catch {
-    return null;
-  }
 }

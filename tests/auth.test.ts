@@ -2,34 +2,44 @@ import { describe, expect, it } from "vitest";
 
 import {
   authenticateCredentials,
-  AuthenticationConfigurationError,
-  createSessionToken,
-  getAuthenticationConfiguration,
-  verifySessionToken,
+  CredentialConfigurationError,
+  getCredentialConfiguration,
+  loginCredentialsSchema,
 } from "@/lib/auth";
+import {
+  createSessionToken,
+  getSessionConfiguration,
+  SessionConfigurationError,
+  verifySessionToken,
+} from "@/lib/session-token";
 
-const AUTHENTICATION_CONFIGURATION = {
+const CREDENTIAL_CONFIGURATION = {
   username: "operator",
   password: "a-strong-browser-password",
+};
+const SESSION_CONFIGURATION = {
   sessionSecret: "a-session-secret-that-is-at-least-32-characters-long",
 };
 
 describe("browser authentication", () => {
   it("accepts the configured username and password without exposing them in the identity", () => {
     const identity = authenticateCredentials(
-      {
+      loginCredentialsSchema.parse({
         username: " operator ",
         password: "a-strong-browser-password",
-      },
-      AUTHENTICATION_CONFIGURATION,
+      }),
+      CREDENTIAL_CONFIGURATION,
     );
 
     expect(identity).toMatch(/^[a-f\d]{64}$/u);
     expect(identity).not.toContain("operator");
     expect(
       authenticateCredentials(
-        { username: "operator", password: "incorrect-password" },
-        AUTHENTICATION_CONFIGURATION,
+        loginCredentialsSchema.parse({
+          username: "operator",
+          password: "incorrect-password",
+        }),
+        CREDENTIAL_CONFIGURATION,
       ),
     ).toBeNull();
   });
@@ -38,13 +48,13 @@ describe("browser authentication", () => {
     const expiresAt = new Date("2026-08-18T12:00:00.000Z");
     const token = await createSessionToken(
       { identity: "authenticated-user", expiresAt },
-      AUTHENTICATION_CONFIGURATION.sessionSecret,
+      SESSION_CONFIGURATION.sessionSecret,
     );
 
     await expect(
       verifySessionToken(
         token,
-        AUTHENTICATION_CONFIGURATION.sessionSecret,
+        SESSION_CONFIGURATION.sessionSecret,
         new Date("2026-08-18T11:59:59.000Z"),
       ),
     ).resolves.toEqual({
@@ -54,7 +64,7 @@ describe("browser authentication", () => {
     await expect(
       verifySessionToken(
         token,
-        AUTHENTICATION_CONFIGURATION.sessionSecret,
+        SESSION_CONFIGURATION.sessionSecret,
         expiresAt,
       ),
     ).resolves.toBeNull();
@@ -63,22 +73,28 @@ describe("browser authentication", () => {
     ).resolves.toBeNull();
   });
 
-  it("validates all browser authentication environment variables", () => {
+  it("validates credential and session environment variables independently", () => {
     expect(
-      getAuthenticationConfiguration({
+      getCredentialConfiguration({
         EMAIL_AUTOMATOR_USERNAME: "operator",
         EMAIL_AUTOMATOR_PASSWORD: "a-strong-browser-password",
+      }),
+    ).toEqual(CREDENTIAL_CONFIGURATION);
+    expect(
+      getSessionConfiguration({
         EMAIL_AUTOMATOR_SESSION_SECRET:
           "a-session-secret-that-is-at-least-32-characters-long",
       }),
-    ).toEqual(AUTHENTICATION_CONFIGURATION);
+    ).toEqual(SESSION_CONFIGURATION);
 
     expect(() =>
-      getAuthenticationConfiguration({
+      getCredentialConfiguration({
         EMAIL_AUTOMATOR_USERNAME: "operator",
         EMAIL_AUTOMATOR_PASSWORD: "short",
-        EMAIL_AUTOMATOR_SESSION_SECRET: "short",
       }),
-    ).toThrow(AuthenticationConfigurationError);
+    ).toThrow(CredentialConfigurationError);
+    expect(() =>
+      getSessionConfiguration({ EMAIL_AUTOMATOR_SESSION_SECRET: "short" }),
+    ).toThrow(SessionConfigurationError);
   });
 });

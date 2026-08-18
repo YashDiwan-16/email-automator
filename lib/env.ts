@@ -1,25 +1,33 @@
 import "server-only";
 
 import {
-  AuthenticationConfigurationError,
-  getAuthenticationConfiguration,
+  CredentialConfigurationError,
+  getCredentialConfiguration,
 } from "./auth";
 
 import {
   EnvironmentConfigurationError,
   getEmailRuntimeConfiguration,
 } from "./email/runtime-config";
+import {
+  getSessionConfiguration,
+  SessionConfigurationError,
+} from "./session-token";
 
 export { EnvironmentConfigurationError };
-export { AuthenticationConfigurationError };
+export { CredentialConfigurationError, SessionConfigurationError };
 
 export function getServerEnvironment() {
   return getEmailRuntimeConfiguration(process.env);
 }
 
-export function getAuthenticationEnvironment() {
+export function getCredentialEnvironment() {
+  return getCredentialConfiguration(process.env);
+}
+
+export function getSessionEnvironment() {
   return {
-    ...getAuthenticationConfiguration(process.env),
+    ...getSessionConfiguration(process.env),
     secureCookies: process.env.NODE_ENV === "production",
   };
 }

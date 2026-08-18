@@ -6,10 +6,10 @@ import {
   type AuthenticatedSession,
   createSessionToken,
   verifySessionToken,
-} from "@/lib/auth";
+} from "@/lib/session-token";
 import {
-  AuthenticationConfigurationError,
-  getAuthenticationEnvironment,
+  getSessionEnvironment,
+  SessionConfigurationError,
 } from "@/lib/env";
 
 export const SESSION_COOKIE_NAME = "email-automator-session";
@@ -17,8 +17,8 @@ const SESSION_DURATION_MS = 8 * 60 * 60 * 1_000;
 
 export async function createAuthenticatedSession(
   identity: string,
+  environment: ReturnType<typeof getSessionEnvironment>,
 ): Promise<void> {
-  const environment = getAuthenticationEnvironment();
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   const token = await createSessionToken(
     { identity, expiresAt },
@@ -43,10 +43,10 @@ export async function readAuthenticatedSession(): Promise<AuthenticatedSession |
   }
 
   try {
-    const environment = getAuthenticationEnvironment();
+    const environment = getSessionEnvironment();
     return verifySessionToken(token, environment.sessionSecret);
   } catch (error) {
-    if (error instanceof AuthenticationConfigurationError) {
+    if (error instanceof SessionConfigurationError) {
       return null;
     }
 

@@ -6,8 +6,10 @@ import { redirect } from "next/navigation";
 
 import { authenticateCredentials, loginCredentialsSchema } from "@/lib/auth";
 import {
-  AuthenticationConfigurationError,
-  getAuthenticationEnvironment,
+  CredentialConfigurationError,
+  getCredentialEnvironment,
+  getSessionEnvironment,
+  SessionConfigurationError,
 } from "@/lib/env";
 import { FixedWindowRateLimiter } from "@/lib/rate-limit";
 import {
@@ -30,11 +32,16 @@ export async function login(formData: FormData): Promise<void> {
     redirect("/login?error=invalid_credentials");
   }
 
-  let environment;
+  let credentialEnvironment;
+  let sessionEnvironment;
   try {
-    environment = getAuthenticationEnvironment();
+    credentialEnvironment = getCredentialEnvironment();
+    sessionEnvironment = getSessionEnvironment();
   } catch (error) {
-    if (error instanceof AuthenticationConfigurationError) {
+    if (
+      error instanceof CredentialConfigurationError ||
+      error instanceof SessionConfigurationError
+    ) {
       redirect("/login?error=configuration");
     }
 
@@ -47,12 +54,12 @@ export async function login(formData: FormData): Promise<void> {
     redirect("/login?error=rate_limited");
   }
 
-  const identity = authenticateCredentials(parsed.data, environment);
+  const identity = authenticateCredentials(parsed.data, credentialEnvironment);
   if (!identity) {
     redirect("/login?error=invalid_credentials");
   }
 
-  await createAuthenticatedSession(identity);
+  await createAuthenticatedSession(identity, sessionEnvironment);
   redirect("/");
 }
 
