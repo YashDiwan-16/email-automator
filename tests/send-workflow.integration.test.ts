@@ -9,6 +9,7 @@ const ACCESS_TOKEN = "test-access-token-with-32-characters";
 
 const validInput = {
   accessToken: ACCESS_TOKEN,
+  university: "XYZ University",
   to: "first@example.com",
   cc: "second@example.com",
   bcc: "audit@example.com",
@@ -155,6 +156,28 @@ describe("executeSendEmailWorkflow", () => {
     await executeSendEmailWorkflow(validInput, dependencies);
     const result = await executeSendEmailWorkflow(
       { ...validInput, to: "changed@example.com" },
+      dependencies,
+    );
+
+    expect(result).toMatchObject({
+      status: "error",
+      code: "idempotency_conflict",
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects reuse of an idempotency key for a changed university", async () => {
+    const send = vi.fn<EmailProvider["send"]>(async (message) => ({
+      status: "completed",
+      messageId: "message-1",
+      accepted: [...message.to, ...message.cc, ...message.bcc],
+      rejected: [],
+    }));
+    const dependencies = createDependencies({ send });
+
+    await executeSendEmailWorkflow(validInput, dependencies);
+    const result = await executeSendEmailWorkflow(
+      { ...validInput, university: "Another University" },
       dependencies,
     );
 

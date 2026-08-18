@@ -6,11 +6,12 @@ import type {
   ProviderSendResult,
 } from "@/lib/email/provider";
 import { sendPredefinedEmail } from "@/lib/email/service";
-import { PREDEFINED_EMAIL_TEMPLATE } from "@/lib/email/template";
+import { createPredefinedEmailContent } from "@/lib/email/template";
 
 const baseInput = {
   sender: { email: "updates@example.com", name: "Product team" },
   replyTo: "reply@example.com",
+  university: "XYZ University",
   to: ["primary@example.com"],
   cc: ["visible@example.com"],
   bcc: ["hidden@example.com"],
@@ -36,14 +37,27 @@ describe("sendPredefinedEmail", () => {
     });
 
     const result = await sendPredefinedEmail({ provider, input: baseInput });
+    const content = createPredefinedEmailContent(baseInput.university);
 
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({
-      ...baseInput,
-      subject: PREDEFINED_EMAIL_TEMPLATE.subject,
-      text: PREDEFINED_EMAIL_TEMPLATE.text,
+      sender: baseInput.sender,
+      replyTo: baseInput.replyTo,
+      to: baseInput.to,
+      cc: baseInput.cc,
+      bcc: baseInput.bcc,
+      subject: "A message from RDM University for XYZ University",
+      text: content.text,
     });
-    expect(messages[0]?.html).toContain("A quick update");
+    expect(messages[0]?.text).toContain("Dear XYZ University,");
+    expect(messages[0]?.text).toContain(
+      "Regards,\nSankar\nPrincipal\nRDM University",
+    );
+    expect(messages[0]?.html).toContain("Dear");
+    expect(messages[0]?.html).toContain("XYZ University");
+    expect(messages[0]?.html).toContain("Sankar");
+    expect(messages[0]?.html).toContain("Principal");
+    expect(messages[0]?.html).toContain("RDM University");
     expect(result).toEqual({
       acceptedCount: 3,
       failedCount: 0,

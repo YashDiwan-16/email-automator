@@ -8,6 +8,7 @@ import {
 
 const validInput = {
   accessToken: "a-secure-access-token-value",
+  university: "XYZ University",
   to: "first@example.com",
   cc: "",
   bcc: "",
@@ -53,6 +54,25 @@ describe("parseAddressList", () => {
 });
 
 describe("emailComposerSchema", () => {
+  it("requires and normalizes the exact recipient university", () => {
+    const result = emailComposerSchema.parse({
+      ...validInput,
+      university: "  XYZ University  ",
+    });
+
+    expect(result.university).toBe("XYZ University");
+
+    for (const university of ["", "Unsafe\r\nBcc: hidden@example.com"]) {
+      const invalidResult = emailComposerSchema.safeParse({
+        ...validInput,
+        university,
+      });
+
+      expect(invalidResult.success).toBe(false);
+      expect(invalidResult.error?.flatten().fieldErrors.university).toBeDefined();
+    }
+  });
+
   it("normalizes and deduplicates across To, CC, and BCC", () => {
     const result = emailComposerSchema.parse({
       ...validInput,

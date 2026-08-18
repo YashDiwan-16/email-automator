@@ -9,6 +9,7 @@ interface SendConfirmationDialogProps {
   onCancel: () => void;
   onConfirm: () => void;
   toCount: number;
+  university: string;
 }
 
 function formatAddressCount(count: number, label: string): string {
@@ -22,8 +23,10 @@ export function SendConfirmationDialog({
   onCancel,
   onConfirm,
   toCount,
+  university,
 }: SendConfirmationDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const recipientCount = toCount + ccCount + bccCount;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -75,13 +78,16 @@ export function SendConfirmationDialog({
           id="send-confirmation-title"
           className="text-xl font-semibold tracking-[-0.02em]"
         >
-          Send one email to {toCount + ccCount + bccCount} recipients?
+          Send one email to {recipientCount}{" "}
+          {recipientCount === 1 ? "recipient" : "recipients"}?
         </h2>
         <p
           id="send-confirmation-description"
           className="mt-2 text-sm leading-6 text-slate-600"
         >
-          Every recipient can see {formatAddressCount(toCount, "To")} and{" "}
+          The greeting will address <strong>{university}</strong>. Every recipient
+          receives the same university-specific message. Every recipient can see{" "}
+          {formatAddressCount(toCount, "To")} and{" "}
           {formatAddressCount(ccCount, "CC")} in the message headers. The{" "}
           {formatAddressCount(bccCount, "BCC")} will remain hidden. The configured
           template will be sent exactly as defined in code.

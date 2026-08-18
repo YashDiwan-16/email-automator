@@ -9,20 +9,22 @@ import type { EmailProvider } from "@/lib/email/provider";
 
 describe("parseEmailCsv", () => {
   it("parses To, CC, and BCC cells with shared normalization and deduplication", () => {
-    const result = parseEmailCsv(`to,cc,bcc
-Owner@EXAMPLE.COM,"owner@example.com; team@example.com",audit@example.com
-second@example.com,,hidden@example.com`);
+    const result = parseEmailCsv(`to,university,cc,bcc
+Owner@EXAMPLE.COM,  XYZ University  ,"owner@example.com; team@example.com",audit@example.com
+second@example.com,ABC Institute,,hidden@example.com`);
 
     expect(result).toEqual({
       rows: [
         {
           rowNumber: 2,
+          university: "XYZ University",
           to: ["Owner@example.com"],
           cc: ["team@example.com"],
           bcc: ["audit@example.com"],
         },
         {
           rowNumber: 3,
+          university: "ABC Institute",
           to: ["second@example.com"],
           cc: [],
           bcc: ["hidden@example.com"],
@@ -33,13 +35,15 @@ second@example.com,,hidden@example.com`);
   });
 
   it("reports invalid rows while preserving valid rows", () => {
-    const result = parseEmailCsv(`to,cc,bcc
-valid@example.com,,
-broken-address,also-broken,`);
+    const result = parseEmailCsv(`to,university,cc,bcc
+valid@example.com,Valid University,,
+broken-address,Unsafe University,also-broken,
+another@example.com,,,`);
 
     expect(result.rows).toEqual([
       {
         rowNumber: 2,
+        university: "Valid University",
         to: ["valid@example.com"],
         cc: [],
         bcc: [],
@@ -54,12 +58,24 @@ broken-address,also-broken,`);
           "CC: Invalid email address: also-broken",
         ],
       },
+      {
+        rowNumber: 4,
+        messages: ["University: Enter the recipient university."],
+      },
     ]);
   });
 
   it("rejects files without a To header", () => {
-    expect(() => parseEmailCsv("email,cc\nfirst@example.com,")).toThrow(
+    expect(() =>
+      parseEmailCsv("email,university,cc\nfirst@example.com,XYZ University,"),
+    ).toThrow(
       new CsvInputError('CSV must include a "to" header.'),
+    );
+  });
+
+  it("rejects files without a university header", () => {
+    expect(() => parseEmailCsv("to,cc\nfirst@example.com,")).toThrow(
+      new CsvInputError('CSV must include a "university" header.'),
     );
   });
 });
@@ -81,10 +97,10 @@ describe("sendCsvEmailBatch", () => {
         rejected: [],
       };
     });
-    const rows = parseEmailCsv(`to,cc,bcc
-one@example.com,,
-two@example.com,visible@example.com,
-three@example.com,,hidden@example.com`).rows;
+    const rows = parseEmailCsv(`to,university,cc,bcc
+one@example.com,One University,,
+two@example.com,Two University,visible@example.com,
+three@example.com,Three University,,hidden@example.com`).rows;
 
     const result = await sendCsvEmailBatch({
       provider: { send },
@@ -122,6 +138,7 @@ three@example.com,,hidden@example.com`).rows;
       rows: [
         {
           rowNumber: 2,
+          university: "Resume University",
           to: ["already-sent@example.com"],
           cc: ["pending@example.com"],
           bcc: [],

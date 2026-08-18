@@ -39,6 +39,7 @@ function rowFingerprint(
         templateVersion: context.templateVersion,
         senderEmail: context.senderEmail.toLocaleLowerCase("en-US"),
         replyTo: context.replyTo?.toLocaleLowerCase("en-US"),
+        university: row.university,
         to: row.to,
         cc: row.cc,
         bcc: row.bcc,

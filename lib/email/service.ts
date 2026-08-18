@@ -6,13 +6,14 @@ import type { EmailSender } from "./configuration";
 import type { EmailProvider, ProviderMessage, ProviderSendResult } from "./provider";
 import type { AddressGroups } from "./schema";
 import {
-  PREDEFINED_EMAIL_TEMPLATE,
+  createPredefinedEmailContent,
   PredefinedEmailTemplate,
 } from "./template";
 
 export interface PredefinedEmailInput extends AddressGroups {
   sender: EmailSender;
   replyTo?: string;
+  university: string;
   /** Sends only this envelope subset while retaining the complete visible headers. */
   deliveryRecipients?: string[];
 }
@@ -80,16 +81,19 @@ export async function sendPredefinedEmail({
   const targetRecipients = deliveryRecipientKeys
     ? recipients.filter((recipient) => deliveryRecipientKeys.has(addressKey(recipient)))
     : recipients;
-  const html = await render(PredefinedEmailTemplate());
+  const content = createPredefinedEmailContent(input.university);
+  const html = await render(
+    PredefinedEmailTemplate({ university: input.university }),
+  );
   const baseMessage: ProviderMessage = {
     sender: input.sender,
     replyTo: input.replyTo,
     to: input.to,
     cc: input.cc,
     bcc: input.bcc,
-    subject: PREDEFINED_EMAIL_TEMPLATE.subject,
+    subject: content.subject,
     html,
-    text: PREDEFINED_EMAIL_TEMPLATE.text,
+    text: content.text,
   };
   const attempts = Math.max(1, maximumAttempts);
   const resolved = new Map<string, RecipientDeliveryResult>();

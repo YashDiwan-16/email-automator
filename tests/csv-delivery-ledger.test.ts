@@ -8,6 +8,7 @@ import type { CsvEmailRow } from "@/lib/email/csv-email-source";
 
 const row: CsvEmailRow = {
   rowNumber: 2,
+  university: "XYZ University",
   to: ["primary@example.com"],
   cc: ["visible@example.com"],
   bcc: ["hidden@example.com"],
@@ -71,6 +72,9 @@ describe("CsvDeliveryLedger", () => {
     expect(ledger.plan([row], context)).toEqual([]);
     expect(
       ledger.plan([row], { ...context, templateVersion: "template-v2" }),
+    ).toHaveLength(1);
+    expect(
+      ledger.plan([{ ...row, university: "Another University" }], context),
     ).toHaveLength(1);
     expect(ledger.plan([row], context, { force: true })).toEqual([
       {

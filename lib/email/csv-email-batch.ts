@@ -75,6 +75,7 @@ export async function sendCsvEmailBatch({
           input: {
             sender,
             replyTo,
+            university: row.university,
             to: row.to,
             cc: row.cc,
             bcc: row.bcc,

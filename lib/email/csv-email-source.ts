@@ -3,6 +3,7 @@ import { parse } from "csv-parse/sync";
 import {
   type AddressGroups,
   emailAddressGroupsSchema,
+  universityNameSchema,
 } from "./schema";
 
 const MAX_CSV_BYTES = 2 * 1_024 * 1_024;
@@ -10,12 +11,14 @@ const MAX_CSV_ROWS = 1_000;
 
 interface RawCsvRow {
   to?: string;
+  university?: string;
   cc?: string;
   bcc?: string;
 }
 
 export interface CsvEmailRow extends AddressGroups {
   rowNumber: number;
+  university: string;
 }
 
 export interface CsvRowValidationError {
@@ -70,6 +73,10 @@ export function parseEmailCsv(contents: string): ParsedEmailCsv {
     throw new CsvInputError('CSV must include a "to" header.');
   }
 
+  if (!headers.includes("university")) {
+    throw new CsvInputError('CSV must include a "university" header.');
+  }
+
   if (new Set(headers).size !== headers.length) {
     throw new CsvInputError("CSV headers must not be repeated.");
   }
@@ -83,23 +90,37 @@ export function parseEmailCsv(contents: string): ParsedEmailCsv {
 
   records.forEach((record, index) => {
     const rowNumber = index + 2;
-    const parsed = emailAddressGroupsSchema.safeParse({
+    const parsedUniversity = universityNameSchema.safeParse(
+      record.university ?? "",
+    );
+    const parsedAddresses = emailAddressGroupsSchema.safeParse({
       to: record.to ?? "",
       cc: record.cc ?? "",
       bcc: record.bcc ?? "",
     });
+    const messages = [
+      ...(parsedUniversity.success
+        ? []
+        : parsedUniversity.error.issues.map(
+            (issue) => `University: ${issue.message}`,
+          )),
+      ...(parsedAddresses.success
+        ? []
+        : parsedAddresses.error.issues.map((issue) =>
+            formatAddressIssue(issue.path, issue.message),
+          )),
+    ];
 
-    if (!parsed.success) {
-      errors.push({
-        rowNumber,
-        messages: parsed.error.issues.map((issue) =>
-          formatAddressIssue(issue.path, issue.message),
-        ),
-      });
+    if (!parsedUniversity.success || !parsedAddresses.success) {
+      errors.push({ rowNumber, messages });
       return;
     }
 
-    rows.push({ rowNumber, ...parsed.data });
+    rows.push({
+      rowNumber,
+      university: parsedUniversity.data,
+      ...parsedAddresses.data,
+    });
   });
 
   return { rows, errors };

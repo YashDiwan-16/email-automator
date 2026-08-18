@@ -11,33 +11,61 @@ import {
 
 /** Update the version whenever the approved subject or body changes. */
 export const PREDEFINED_EMAIL_TEMPLATE = {
-  version: "2026-08-18.1",
-  subject: "A quick update from our team",
-  text: [
-    "Hello,",
-    "",
-    "A quick update from our team: we have something new to share with you.",
-    "",
-    "Thank you for staying connected.",
-  ].join("\n"),
+  version: "2026-08-18.2",
+  subject: "A message from RDM University",
 } as const;
 
-export function PredefinedEmailTemplate() {
+export function createPredefinedEmailContent(university: string) {
+  return {
+    subject: `${PREDEFINED_EMAIL_TEMPLATE.subject} for ${university}`,
+    text: [
+      `Dear ${university},`,
+      "",
+      "We have something new to share with you.",
+      "",
+      "Thank you for staying connected.",
+      "",
+      "Regards,",
+      "Sankar",
+      "Principal",
+      "RDM University",
+    ].join("\n"),
+  };
+}
+
+interface PredefinedEmailTemplateProps {
+  university: string;
+}
+
+export function PredefinedEmailTemplate({
+  university,
+}: PredefinedEmailTemplateProps) {
+  const content = createPredefinedEmailContent(university);
+
   return (
     <Html lang="en" dir="ltr">
       <Head />
-      <Preview>{PREDEFINED_EMAIL_TEMPLATE.subject}</Preview>
+      <Preview>{content.subject}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
-          <Text style={styles.eyebrow}>A QUICK UPDATE</Text>
+          <Text style={styles.eyebrow}>RDM UNIVERSITY</Text>
           <Heading as="h1" style={styles.heading}>
-            Hello from our team
+            Dear {university},
           </Heading>
           <Hr style={styles.divider} />
           <Text style={styles.message}>
             We have something new to share with you.
           </Text>
           <Text style={styles.followUp}>Thank you for staying connected.</Text>
+          <Text style={styles.signOff}>
+            Regards,
+            <br />
+            <strong>Sankar</strong>
+            <br />
+            Principal
+            <br />
+            RDM University
+          </Text>
         </Container>
       </Body>
     </Html>
@@ -89,5 +117,11 @@ const styles = {
     fontSize: "16px",
     lineHeight: "1.7",
     margin: "18px 0 0",
+  },
+  signOff: {
+    color: "#343630",
+    fontSize: "16px",
+    lineHeight: "1.6",
+    margin: "28px 0 0",
   },
 };

@@ -2,6 +2,17 @@ import { z } from "zod";
 
 export const MAX_RECIPIENTS = 10;
 
+export const universityNameSchema = z
+  .string()
+  .transform((value) => value.trim().normalize("NFKC"))
+  .pipe(
+    z
+      .string()
+      .min(1, { error: "Enter the recipient university." })
+      .max(150, { error: "Use 150 characters or fewer." })
+      .regex(/^[^<>\r\n]*$/u, { error: "Enter a valid university name." }),
+  );
+
 function normalizeDomain(domain: string): string {
   const lowerCasedDomain = domain.toLocaleLowerCase("en-US");
 
@@ -180,6 +191,7 @@ const rawEmailComposerSchema = rawAddressGroupsSchema.extend({
     .string()
     .min(16, { error: "Enter your access token." })
     .max(256, { error: "The access token is too long." }),
+  university: universityNameSchema,
   idempotencyKey: z.uuid({ error: "Start a new send and try again." }),
 });
 
@@ -190,6 +202,7 @@ export const emailComposerSchema = rawEmailComposerSchema
   .transform((input) => {
     return {
       accessToken: input.accessToken,
+      university: input.university,
       ...resolveAddressGroups(input).groups,
       idempotencyKey: input.idempotencyKey,
     };

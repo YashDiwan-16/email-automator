@@ -19,6 +19,7 @@ import { SendConfirmationDialog } from "./send-confirmation-dialog";
 
 const defaultValues: EmailComposerInput = {
   accessToken: "",
+  university: "",
   to: "",
   cc: "",
   bcc: "",
@@ -27,6 +28,7 @@ const defaultValues: EmailComposerInput = {
 
 const fieldNames = new Set<EmailComposerField>([
   "accessToken",
+  "university",
   "to",
   "cc",
   "bcc",
@@ -269,8 +271,8 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
               {templateSubject}
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              Subject and content are predefined in the application and cannot be
-              changed from this form.
+              The university is inserted into the approved subject and greeting.
+              All other content is predefined in the application.
             </p>
           </div>
 
@@ -316,6 +318,40 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
           </div>
 
           <div className="space-y-5">
+            <div>
+              <label
+                htmlFor="university"
+                className="text-sm font-semibold text-slate-900"
+              >
+                Recipient university
+              </label>
+              <p
+                id="university-help"
+                className="mt-1 text-xs leading-5 text-slate-500"
+              >
+                Enter the exact official name used in the greeting, for example
+                “XYZ University”. It is never guessed from the email address.
+              </p>
+              <input
+                id="university"
+                type="text"
+                autoComplete="organization"
+                aria-describedby={`university-help${errors.university ? " university-error" : ""}`}
+                aria-invalid={Boolean(errors.university)}
+                className={inputClassName}
+                disabled={isPending}
+                placeholder="XYZ University"
+                {...register("university")}
+              />
+              {errors.university ? (
+                <p
+                  id="university-error"
+                  className="mt-1.5 text-xs font-medium text-red-600"
+                >
+                  {errors.university.message}
+                </p>
+              ) : null}
+            </div>
             <AddressField
               required
               name="to"
@@ -381,6 +417,7 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
 
       <SendConfirmationDialog
         isOpen={pendingSubmission !== null}
+        university={pendingSubmission?.university ?? ""}
         toCount={counts.toCount}
         ccCount={counts.ccCount}
         bccCount={counts.bccCount}

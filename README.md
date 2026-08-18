@@ -4,8 +4,9 @@ Courier is an authorized email-dispatch app built with Next.js 16 and Nodemailer
 
 ## What it does
 
-- The browser accepts only an access token and To, CC, and BCC addresses.
+- The browser accepts only an access token, the exact recipient university, and To, CC, and BCC addresses.
 - Sender identity, reply-to, subject, plain text, and HTML are controlled by server configuration and code.
+- The approved template greets the supplied university and signs off as Sankar, Principal, RDM University.
 - One browser submission creates one SMTP message: To and CC are visible, while BCC is hidden.
 - `pnpm send <file.csv>` sends CSV rows with the same template and address semantics.
 - Addresses are normalized, deduplicated in To → CC → BCC order, validated, and capped before sending.
@@ -59,7 +60,7 @@ Gmail can be convenient for local testing with OAuth2 or an app password, but us
 
 Edit `lib/email/template.tsx`. Update its `version` whenever subject or body content changes; browser fingerprints and CSV resume keys include that version.
 
-The form intentionally does not accept a subject or message body. This prevents operators from bypassing the approved template.
+The form intentionally does not accept a free-form subject or message body. It accepts only the recipient university used by the approved subject and greeting, preventing operators from bypassing the rest of the template.
 
 ## Browser workflow
 
@@ -67,7 +68,7 @@ The form intentionally does not accept a subject or message body. This prevents 
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), enter `EMAIL_AUTOMATOR_ACCESS_TOKEN`, add To/CC/BCC addresses, review the visibility confirmation, and send.
+Open [http://localhost:3000](http://localhost:3000), enter `EMAIL_AUTOMATOR_ACCESS_TOKEN`, the exact recipient university, and To/CC/BCC addresses; then review the confirmation and send. The application does not guess a university from an email domain.
 
 - To and CC recipients can see all To and CC headers.
 - BCC recipients receive the message without their addresses appearing in the visible headers.
@@ -97,15 +98,16 @@ pnpm send recipients.csv --force
 CSV format:
 
 ```csv
-to,cc,bcc
-customer@example.com,,
-primary@example.com,manager@example.com,audit@example.com
-"first@example.com; second@example.com",visible@example.com,"hidden-one@example.com; hidden-two@example.com"
+to,university,cc,bcc
+customer@example.com,XYZ University,,
+primary@example.com,ABC Institute,manager@example.com,audit@example.com
+"first@example.com; second@example.com",Example University,visible@example.com,"hidden-one@example.com; hidden-two@example.com"
 ```
 
 Rules:
 
-- `to` is required; `cc` and `bcc` columns are optional.
+- `to` and `university` are required; `cc` and `bcc` columns are optional.
+- `university` must contain the exact institution name for that row. It is inserted into the approved subject and greeting and is never inferred from an address.
 - Each row creates one SMTP message.
 - Put multiple addresses in a cell using semicolons or new lines. If using commas inside a cell, quote the cell as valid CSV.
 - Put one address per row in `to` when recipients must not see one another.
