@@ -40,7 +40,10 @@ describe("sendPredefinedEmail", () => {
     });
 
     const result = await sendPredefinedEmail({ provider, input: baseInput });
-    const content = createPredefinedEmailContent(baseInput.personalization);
+    const content = createPredefinedEmailContent(
+      baseInput.personalization,
+      baseInput.replyTo,
+    );
 
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({
@@ -49,18 +52,30 @@ describe("sendPredefinedEmail", () => {
       to: baseInput.to,
       cc: baseInput.cc,
       bcc: baseInput.bcc,
-      subject: "A message from RDM University for XYZ University",
+      subject: "EduDeca – Invitation to Participate",
       text: content.text,
     });
-    expect(messages[0]?.text).toContain("Dear XYZ University,");
+    expect(messages[0]?.text).toContain("Dear Principal / Head of Institution,");
     expect(messages[0]?.text).toContain(
-      "Regards,\nSankar\nPrincipal\nRDM University",
+      "We invite XYZ University to express interest in participating in EduDeca – Wiz360",
     );
-    expect(messages[0]?.html).toContain("Dear");
+    expect(messages[0]?.text).toContain("What does Wiz360 test?");
+    expect(messages[0]?.text).toContain("The 10-level journey");
+    expect(messages[0]?.text).toContain(
+      "Why should your institution participate?",
+    );
+    expect(messages[0]?.text).toContain("₹10 lakh first prize");
+    expect(messages[0]?.text).toContain("28 Aug 2026");
+    expect(messages[0]?.text).toContain(
+      "Warm regards,\nSankar\nEduDeca – Wiz360\nPrincipal | reply@example.com",
+    );
+    expect(messages[0]?.text).not.toContain("{{");
+    expect(messages[0]?.html).toContain("Dear Principal / Head of Institution");
     expect(messages[0]?.html).toContain("XYZ University");
     expect(messages[0]?.html).toContain("Sankar");
     expect(messages[0]?.html).toContain("Principal");
-    expect(messages[0]?.html).toContain("RDM University");
+    expect(messages[0]?.html).toContain("EduDeca");
+    expect(messages[0]?.html).not.toContain("{{");
     expect(result).toEqual({
       acceptedCount: 3,
       failedCount: 0,

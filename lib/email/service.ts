@@ -81,8 +81,16 @@ export async function sendPredefinedEmail({
   const targetRecipients = deliveryRecipientKeys
     ? recipients.filter((recipient) => deliveryRecipientKeys.has(addressKey(recipient)))
     : recipients;
-  const content = createPredefinedEmailContent(input.personalization);
-  const html = await render(PredefinedEmailTemplate(input.personalization));
+  const contactEmail = input.replyTo ?? input.sender.email;
+  const templateInput = {
+    contactEmail,
+    personalization: input.personalization,
+  };
+  const content = createPredefinedEmailContent(
+    templateInput.personalization,
+    templateInput.contactEmail,
+  );
+  const html = await render(PredefinedEmailTemplate(templateInput));
   const baseMessage: ProviderMessage = {
     sender: input.sender,
     replyTo: input.replyTo,

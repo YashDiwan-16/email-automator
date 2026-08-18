@@ -85,8 +85,8 @@ export function SendConfirmationDialog({
           id="send-confirmation-description"
           className="mt-2 text-sm leading-6 text-slate-600"
         >
-          The greeting will address <strong>{university}</strong>. Every recipient
-          receives the same university-specific message. Every recipient can see{" "}
+          The invitation will name <strong>{university}</strong>. Every recipient
+          receives the same institution-specific message. Every recipient can see{" "}
           {formatAddressCount(toCount, "To")} and{" "}
           {formatAddressCount(ccCount, "CC")} in the message headers. The{" "}
           {formatAddressCount(bccCount, "BCC")} will remain hidden. The configured

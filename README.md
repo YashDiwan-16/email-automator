@@ -1,128 +1,268 @@
-# Courier Email Automator
+# Email Automator
 
-A small email-sending tool built with Next.js, Nodemailer, and React Email. Send the same approved template from the browser or from a CSV file.
+Email Automator sends a predefined email from a web page or a CSV file. It is
+built with Next.js, Nodemailer, and React Email.
 
-## Email format
+The CSV script is useful when you want to prepare a list of recipients and send
+the emails with one command.
 
-Operators provide only:
+## What the app sends
 
-- The recipient university
-- To addresses
-- Optional CC and BCC addresses
+You provide:
 
-The subject and message are predefined in [`lib/email/template.tsx`](lib/email/template.tsx). For `XYZ University`, the email includes:
+- the main recipient (`to`)
+- the recipient's university
+- optional CC recipients
+- optional BCC recipients
 
-```text
-Dear XYZ University,
+The email subject and message are stored in
+[`lib/email/template.tsx`](lib/email/template.tsx). Review that file before you
+send a real email.
 
-...
+The approved email is the EduDeca – Wiz360 college introduction and invitation.
+The `university` value replaces the recipient college/school placeholder. The
+message is signed by Sankar for EduDeca – Wiz360, and the contact email comes
+from `EMAIL_ADMIN`. Sender details are not entered through the browser or CSV.
 
-Regards,
-Sankar
-Principal
-RDM University
-```
+Each CSV row creates a separate email:
 
-The university must be entered explicitly. The application never guesses it from an email address.
+- **To** recipients are the main recipients.
+- **CC** recipients receive a visible copy.
+- **BCC** recipients receive a hidden copy.
 
-## Setup
+## Requirements
 
-Requirements: Node.js 20+ and pnpm.
+- Node.js 20 or newer
+- pnpm
+- a Gmail account with 2-Step Verification enabled
+- a Gmail App Password
+
+## Install the project
 
 ```bash
 pnpm install
 cp .env.example .env.local
 ```
 
-Configure `.env.local`:
+Open `.env.local` and add your settings:
 
 ```env
 EMAIL_SERVER_HOST=smtp.gmail.com
 EMAIL_SERVER_PORT=465
 EMAIL_SERVER_USER=your-email@gmail.com
-EMAIL_SERVER_PASSWORD=your-gmail-app-password
+EMAIL_SERVER_PASSWORD=your-16-character-app-password
 EMAIL_ADMIN=your-email@gmail.com
 EMAIL_AUTOMATOR_ACCESS_TOKEN=your-private-browser-token
 ```
 
-For Gmail, use an app password instead of your normal account password.
+Important:
 
-### Browser access token
+- Use a Google App Password, not your normal Gmail password.
+- Write the App Password without spaces.
+- Never commit or share `.env.local`.
+- If an App Password is exposed, revoke it and create a new one.
 
-`EMAIL_AUTOMATOR_ACCESS_TOKEN` protects the website from unauthorized email sending. It is an application token—not your Gmail password.
-
-Generate one:
+`EMAIL_AUTOMATOR_ACCESS_TOKEN` protects the browser interface. Generate a
+private token with:
 
 ```bash
 openssl rand -base64 32
 ```
 
-Save the generated value in `.env.local` and share it privately only with authorized operators. The local CSV command does not require this token.
+The CSV script does not require the browser access token.
+
+## Send your first CSV email
+
+### 1. Create the CSV file
+
+Create `data/send.csv` with this content:
+
+```csv
+to,university,cc,bcc
+your-email@gmail.com,Test University,,
+```
+
+Use your own email address for the first test.
+
+The first row must be exactly:
+
+```csv
+to,university,cc,bcc
+```
+
+Every data row must contain all four columns. When CC and BCC are empty, keep
+the two commas at the end:
+
+```csv
+your-email@gmail.com,Test University,,
+```
+
+### 2. Run the script
+
+Run this command from the project folder:
+
+```bash
+pnpm send send.csv
+```
+
+Pass only the filename. The script automatically looks inside `data/`.
+
+Correct:
+
+```bash
+pnpm send send.csv
+```
+
+Incorrect:
+
+```bash
+pnpm send data/send.csv
+```
+
+You can also leave out the `.csv` extension:
+
+```bash
+pnpm send send
+```
+
+The script sends immediately after the file passes validation. Check the
+template and recipient addresses before running the command.
+
+### 3. Check the result
+
+A successful run looks similar to this:
+
+```text
+Sending template "Email subject" to 1 pending recipients across 1 rows...
+Finished: 1 accepted, 0 not accepted.
+```
+
+`accepted` means the SMTP server accepted the message. It does not guarantee
+that the email reached the inbox, so also check the spam folder.
+
+## CSV examples
+
+### No CC or BCC
+
+```csv
+to,university,cc,bcc
+student@example.com,ABC University,,
+```
+
+### With CC and BCC
+
+```csv
+to,university,cc,bcc
+student@example.com,ABC University,manager@example.com,audit@example.com
+```
+
+### Multiple CC or BCC recipients
+
+Separate multiple addresses with semicolons:
+
+```csv
+to,university,cc,bcc
+student@example.com,ABC University,"manager@example.com; team@example.com","audit@example.com; archive@example.com"
+```
+
+### Multiple emails
+
+Add one row for each email:
+
+```csv
+to,university,cc,bcc
+first@example.com,ABC University,,
+second@example.com,XYZ University,manager@example.com,
+third@example.com,RDM University,,audit@example.com
+```
+
+## Preventing duplicate emails
+
+After an email is accepted, the script records it in:
+
+```text
+data/.email-send-ledger.json
+```
+
+Running the same CSV again skips recipients that were already accepted for the
+same university and template.
+
+If you intentionally want to send the template again, use:
+
+```bash
+pnpm send send.csv --force
+```
+
+Use `--force` carefully because it can send duplicate emails.
+
+## Common errors
+
+### CSV files must be selected by name from the data folder
+
+You included `data/` in the command. Use:
+
+```bash
+pnpm send send.csv
+```
+
+### CSV must include a "to" header
+
+Make sure the first row starts with lowercase `to`:
+
+```csv
+to,university,cc,bcc
+```
+
+### CSV must include a "university" header
+
+Add the required `university` column using the exact lowercase spelling.
+
+### CSV could not be parsed
+
+The number of values probably does not match the number of headers. If CC and
+BCC are empty, end the row with two commas:
+
+```csv
+student@example.com,ABC University,,
+```
+
+Also check that values containing commas are wrapped in double quotes.
+
+### SMTP environment variables are missing or invalid
+
+Check `.env.local`. Make sure the Gmail address and App Password are correct,
+and remove spaces from the App Password.
+
+### No pending recipients
+
+The script has already sent the current template to those recipients. Use
+`--force` only if you intentionally want to send it again.
 
 ## Send from the browser
+
+Start the development server:
 
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), then enter:
+Open [http://localhost:3000](http://localhost:3000). Enter the private browser
+token, university, To addresses, and optional CC/BCC addresses. Review the
+confirmation before sending.
 
-1. The browser access token
-2. The exact recipient university
-3. To, CC, and BCC addresses
+## Limits and safety
 
-Review the confirmation and send. One browser submission creates one SMTP message. To and CC are visible to recipients; BCC remains hidden.
+- A CSV can contain up to 1,000 rows and can be up to 2 MB.
+- Each row can contain up to 10 unique recipients across To, CC, and BCC.
+- Invalid CSV data stops the whole batch before any email is sent.
+- The script can process up to three CSV rows at the same time.
+- Only send email to people who expect to hear from you.
+- For marketing email, provide an unsubscribe option and follow applicable
+  anti-spam laws.
 
-## Send from CSV
+## Check the project
 
-Create a CSV inside the `data` folder. You can start with the example:
-
-```bash
-cp data/recipients.csv.example data/recipients.csv
-```
-
-CSV format:
-
-```csv
-to,university,cc,bcc
-recipient@example.com,XYZ University,,
-principal@example.com,ABC Institute,manager@example.com,audit@example.com
-```
-
-- `to` and `university` are required.
-- `cc` and `bcc` are optional.
-- Each row sends one university-specific email.
-- Separate multiple addresses inside one cell with semicolons.
-- Quote a cell if it contains commas.
-
-Run:
-
-```bash
-pnpm send recipients.csv
-```
-
-The filename is resolved from the `data` folder and may also be passed without `.csv`:
-
-```bash
-pnpm send recipients
-```
-
-Successful deliveries are checkpointed, so rerunning the command skips recipients already accepted for the same university and template. To deliberately resend everything:
-
-```bash
-pnpm send recipients.csv --force
-```
-
-## Validation and limits
-
-- Browser: maximum 10 unique recipients per message.
-- CSV: maximum 1,000 rows, 2 MB, and 10 unique recipients per row.
-- Invalid CSV rows stop the complete batch before any email is sent.
-- CSV sends run with up to three rows in parallel.
-- SMTP acceptance does not guarantee inbox delivery.
-- Send only to people who expect to hear from you.
-
-## Verify the project
+These commands do not send real emails:
 
 ```bash
 pnpm typecheck
@@ -131,4 +271,4 @@ pnpm test
 pnpm build
 ```
 
-Tests use a mocked provider and do not send real emails.
+The automated tests use a mock email provider.

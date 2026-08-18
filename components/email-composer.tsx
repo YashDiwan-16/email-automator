@@ -271,8 +271,8 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
               {templateSubject}
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              The university is inserted into the approved subject and greeting.
-              All other content is predefined in the application.
+              The university is inserted into the approved EduDeca invitation.
+              All other content and sender details are fixed in code.
             </p>
           </div>
 
@@ -329,7 +329,7 @@ export function EmailComposer({ templateSubject }: { templateSubject: string }) 
                 id="university-help"
                 className="mt-1 text-xs leading-5 text-slate-500"
               >
-                Enter the exact official name used in the greeting, for example
+                Enter the exact official name used in the invitation, for example
                 “XYZ University”. It is never guessed from the email address.
               </p>
               <input
