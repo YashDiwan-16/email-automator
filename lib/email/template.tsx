@@ -123,7 +123,7 @@ const EMAIL_SIGNATURE = {
 
 /** Update the version whenever the approved subject or body changes. */
 export const PREDEFINED_EMAIL_TEMPLATE = {
-  version: "2026-08-18.5",
+  version: "2026-08-18.6",
   subject: "EduDeca – Invitation to Participate",
   preview:
     "Invitation for Class XI & XII students: EduDeca – India's Wiz360 Knowledge Challenge.",
@@ -454,31 +454,22 @@ export function PredefinedEmailTemplate({
             </Text>
             <Hr style={styles.signatureDivider} />
             <Section style={styles.signatureCard}>
-              <Row>
-                <Column style={styles.monogramColumn} valign="top">
-                  <Text style={styles.monogram}>MS</Text>
-                </Column>
-                <Column valign="top">
-                  <Text style={styles.signatureClosing}>
-                    {content.signature.closing}
-                  </Text>
-                  <Text style={styles.signatureName}>
-                    {content.signature.name}
-                  </Text>
-                  <Text style={styles.signatureOrganization}>
-                    {content.signature.organization}
-                  </Text>
-                  <Text style={styles.signatureRole}>
-                    {content.signature.designation}
-                  </Text>
-                  <Text style={styles.signatureContact}>
-                    {content.signature.email}
-                  </Text>
-                  <Text style={styles.signatureContact}>
-                    {content.signature.mobile}
-                  </Text>
-                </Column>
-              </Row>
+              <Text style={styles.signatureClosing}>
+                {content.signature.closing}
+              </Text>
+              <Text style={styles.signatureName}>{content.signature.name}</Text>
+              <Text style={styles.signatureOrganization}>
+                {content.signature.organization}
+              </Text>
+              <Text style={styles.signatureRole}>
+                {content.signature.designation}
+              </Text>
+              <Text style={styles.signatureContact}>
+                {content.signature.email}
+              </Text>
+              <Text style={styles.signatureContact}>
+                {content.signature.mobile}
+              </Text>
             </Section>
           </Section>
 
@@ -801,20 +792,6 @@ const styles = {
     borderLeft: `4px solid ${BRAND.orange}`,
     borderRadius: "12px",
     padding: "20px",
-  },
-  monogramColumn: { width: "66px" },
-  monogram: {
-    backgroundColor: BRAND.orangeSoft,
-    border: `1px solid ${BRAND.orange}`,
-    borderRadius: "12px",
-    color: BRAND.orange,
-    fontSize: "17px",
-    fontWeight: "800",
-    height: "50px",
-    lineHeight: "50px",
-    margin: "0",
-    textAlign: "center" as const,
-    width: "50px",
   },
   signatureClosing: {
     color: BRAND.muted,

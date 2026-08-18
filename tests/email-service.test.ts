@@ -71,6 +71,7 @@ describe("sendPredefinedEmail", () => {
     expect(messages[0]?.html).toContain("Dear Principal / Head of Institution");
     expect(messages[0]?.html).toContain("XYZ University");
     expect(messages[0]?.html).toContain("Mr. Sankar");
+    expect(messages[0]?.html).not.toContain(">MS<");
     expect(messages[0]?.html).toContain("Principal");
     expect(messages[0]?.html).not.toContain("Designation");
     expect(messages[0]?.html).toContain("alexis36sg@gmail.com");
