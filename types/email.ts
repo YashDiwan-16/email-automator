@@ -1,4 +1,5 @@
 export type DeliveryFailureReason =
+  | "delivery_status_unknown"
   | "provider_rejected"
   | "temporary_provider_failure";
 

@@ -3,22 +3,25 @@ export interface ProviderMessage {
     email: string;
     name: string;
   };
-  to: string;
-  replyTo: string;
+  to: string[];
+  cc: string[];
+  bcc: string[];
+  replyTo?: string;
   subject: string;
   html: string;
   text: string;
-  idempotencyKey: string;
 }
 
 export type ProviderSendResult =
   | {
-      status: "accepted";
+      status: "completed";
       messageId: string;
+      accepted: string[];
+      rejected: string[];
     }
   | {
       status: "failed";
-      failureKind: "temporary" | "permanent";
+      failureKind: "temporary" | "permanent" | "uncertain";
     };
 
 export interface EmailProvider {

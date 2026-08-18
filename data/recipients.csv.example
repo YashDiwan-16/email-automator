@@ -1,0 +1,4 @@
+to,cc,bcc
+customer@example.com,,
+primary@example.com,manager@example.com,audit@example.com
+"first@example.com; second@example.com",visible@example.com,"hidden-one@example.com; hidden-two@example.com"

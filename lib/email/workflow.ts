@@ -9,14 +9,22 @@ import type { DeliverySummary, SendEmailActionResult } from "@/types/email";
 
 import type { EmailProvider } from "./provider";
 import { emailComposerSchema } from "./schema";
-import { type EmailBatchInput, sendEmailBatch } from "./service";
+import {
+  type PredefinedEmailInput,
+  sendPredefinedEmail,
+} from "./service";
+import { PREDEFINED_EMAIL_TEMPLATE } from "./template";
 
 export interface EmailWorkflowDependencies {
   expectedAccessToken: string;
   idempotencyStore: InMemoryIdempotencyStore;
   provider: EmailProvider;
   rateLimiter: FixedWindowRateLimiter;
-  senderEmail: string;
+  sender: {
+    email: string;
+    name: string;
+  };
+  replyTo?: string;
 }
 
 function readAccessToken(input: unknown): string | null {
@@ -28,10 +36,15 @@ function readAccessToken(input: unknown): string | null {
   return typeof accessToken === "string" ? accessToken : null;
 }
 
-function createSubmissionFingerprint(
-  input: EmailBatchInput,
-): string {
-  return createHash("sha256").update(JSON.stringify(input)).digest("hex");
+function createSubmissionFingerprint(input: PredefinedEmailInput): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        templateVersion: PREDEFINED_EMAIL_TEMPLATE.version,
+        ...input,
+      }),
+    )
+    .digest("hex");
 }
 
 function resultFromSummary(
@@ -43,7 +56,7 @@ function resultFromSummary(
       status: "error",
       code: "send_failed",
       message:
-        "No emails were accepted. Check your sender configuration and try again.",
+        "No emails were accepted. Check your SMTP configuration and try again.",
       summary,
     };
   }
@@ -99,23 +112,21 @@ export async function executeSendEmailWorkflow(
     };
   }
 
-  const batchInput: EmailBatchInput = {
-    senderEmail: dependencies.senderEmail,
-    fromName: validatedInput.fromName,
-    replyTo: validatedInput.replyTo,
-    recipients: validatedInput.recipients,
-    subject: validatedInput.subject,
-    message: validatedInput.message,
-    idempotencyKey: validatedInput.idempotencyKey,
+  const deliveryInput: PredefinedEmailInput = {
+    sender: dependencies.sender,
+    replyTo: dependencies.replyTo,
+    to: validatedInput.to,
+    cc: validatedInput.cc,
+    bcc: validatedInput.bcc,
   };
-  const fingerprint = createSubmissionFingerprint(batchInput);
+  const fingerprint = createSubmissionFingerprint(deliveryInput);
   const idempotencyResult = await dependencies.idempotencyStore.run(
     `${accessIdentity}:${validatedInput.idempotencyKey}`,
     fingerprint,
     () =>
-      sendEmailBatch({
+      sendPredefinedEmail({
         provider: dependencies.provider,
-        input: batchInput,
+        input: deliveryInput,
       }),
     (summary) => summary.acceptedCount > 0,
   );

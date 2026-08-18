@@ -1,65 +1,116 @@
 # Courier
 
-Courier is a small, authorized email-dispatch application built with Next.js 16. An operator can compose one message for up to 10 recipients; the server validates the request and sends a separate Resend email to every address so recipients are never exposed to each other.
+Courier is an authorized email-dispatch app built with Next.js 16 and Nodemailer. The browser and CSV command both send the same predefined code-managed template through a configured SMTP account.
+
+## What it does
+
+- The browser accepts only an access token and To, CC, and BCC addresses.
+- Sender identity, reply-to, subject, plain text, and HTML are controlled by server configuration and code.
+- One browser submission creates one SMTP message: To and CC are visible, while BCC is hidden.
+- `pnpm send <file.csv>` sends CSV rows with the same template and address semantics.
+- Addresses are normalized, deduplicated in To → CC → BCC order, validated, and capped before sending.
 
 ## Architecture
 
-- `app/page.tsx` is a Server Component that renders the static page shell.
-- `components/email-composer.tsx` is the interactive React Hook Form client boundary. It uses the same Zod schema as the server for immediate feedback.
-- `app/actions/send-email.ts` is a same-origin Next.js Server Action. It loads server-only configuration and invokes the protected workflow.
-- `lib/email/workflow.ts` authenticates, revalidates, rate-limits, and idempotently dispatches a submission.
-- `lib/email/service.ts` renders one safe React Email HTML body, retains a plain-text body, and sends separate messages with bounded concurrency and safe retries.
-- `lib/email/provider.ts` is the provider-neutral interface; `lib/email/resend-provider.ts` is the Resend adapter.
-- `lib/rate-limit.ts` and `lib/idempotency.ts` provide small in-memory MVP controls. See [Production limitations](#production-limitations) before scaling horizontally.
+- `app/page.tsx` renders the Server Component page shell.
+- `components/email-composer.tsx` is the React Hook Form client boundary.
+- `app/actions/send-email.ts` is the protected same-origin Server Action.
+- `lib/email/workflow.ts` authenticates, validates, rate-limits, and idempotently dispatches browser submissions.
+- `lib/email/service.ts` applies the predefined template and implements conservative SMTP retry behavior.
+- `lib/email/nodemailer-provider.ts` adapts Nodemailer results and SMTP errors to the application delivery model.
+- `lib/email/csv-email-source.ts` validates CSV rows and sends them with bounded concurrency.
+- `scripts/send-emails.ts` is the `pnpm send` command entry point.
+- `lib/email/template.ts` contains the predefined subject, plain-text body, HTML body, and template version.
 
-The Resend API key and verified sender address are only read inside server-only modules. Email is never sent from client-side code.
+Nodemailer credentials are read only by the Server Action or local command. They are never exposed to browser code.
 
 ## Requirements
 
 - Node.js 20 or newer
-- pnpm 10.6.2 (declared in `package.json`)
-- A Resend account, API key, and verified sending domain
+- pnpm 10.6.2
+- An SMTP account or a provider supported by Nodemailer’s well-known services
 
-## Installation
+## Install and configure
 
 ```bash
 pnpm install
 cp .env.example .env.local
-```
-
-Generate a strong access token, for example:
-
-```bash
 openssl rand -base64 32
 ```
 
-Then replace every placeholder in `.env.local`:
+Replace the placeholders in `.env.local`:
 
 | Variable | Purpose |
 | --- | --- |
-| `RESEND_API_KEY` | Server-only Resend API key beginning with `re_` |
-| `RESEND_FROM_EMAIL` | Verified sender address on your Resend domain |
-| `EMAIL_AUTOMATOR_ACCESS_TOKEN` | Random secret of 32–256 characters entered by authorized operators |
+| `SMTP_SERVICE` | Optional Nodemailer well-known service name, such as `Gmail` or `Outlook365` |
+| `SMTP_HOST` | SMTP hostname; required when `SMTP_SERVICE` is empty |
+| `SMTP_PORT` | SMTP port, normally `587` for STARTTLS or `465` for implicit TLS |
+| `SMTP_SECURE` | `true` for implicit TLS on port 465; otherwise `false` |
+| `SMTP_USER` | SMTP username |
+| `SMTP_PASSWORD` | SMTP password or provider-issued app password |
+| `MAIL_FROM_EMAIL` | Authorized sender email address |
+| `MAIL_FROM_NAME` | Fixed sender display name |
+| `MAIL_REPLY_TO` | Optional fixed reply-to address |
+| `EMAIL_AUTOMATOR_ACCESS_TOKEN` | Random 32–256 character secret required by browser sends |
 
-`.env.local` is ignored by Git. `.env.example` contains placeholders only and is intentionally tracked.
+When `SMTP_SERVICE` is set, Nodemailer chooses that service’s connection settings and the custom host, port, and secure values are not used. For a custom SMTP server, leave `SMTP_SERVICE` empty and set `SMTP_HOST`, `SMTP_PORT`, and `SMTP_SECURE`.
 
-## Resend sender setup
+Gmail can be convenient for local testing with OAuth2 or an app password, but use a transactional SMTP provider for production automation. Keep all credentials in the deployment platform’s encrypted environment store and never prefix them with `NEXT_PUBLIC_`.
 
-1. Add a domain in the Resend dashboard.
-2. Publish the DNS records Resend provides and wait until the domain is verified.
-3. Create a sending API key with only the permissions this application needs.
-4. Set `RESEND_FROM_EMAIL` to an address on that verified domain, such as `notifications@example.com`.
-5. Keep the API key in the deployment platform’s encrypted environment-variable store. Never prefix it with `NEXT_PUBLIC_`.
+## Edit the predefined template
 
-The operator controls the friendly “From” display name and reply-to address. The underlying sender email remains fixed on the server.
+Edit `lib/email/template.ts`. Update its `version` whenever subject or body content changes; the browser idempotency fingerprint includes that version.
 
-## Local development
+The form intentionally does not accept a subject or message body. This prevents operators from bypassing the approved template.
+
+## Browser workflow
 
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Enter the value of `EMAIL_AUTOMATOR_ACCESS_TOKEN` in the access-token field when sending. Tests mock the provider and never call Resend.
+Open [http://localhost:3000](http://localhost:3000), enter `EMAIL_AUTOMATOR_ACCESS_TOKEN`, add To/CC/BCC addresses, review the visibility confirmation, and send.
+
+- To and CC recipients can see all To and CC headers.
+- BCC recipients receive the message without their addresses appearing in the visible headers.
+- The combined browser limit is 10 unique recipients per submission.
+
+## CSV workflow
+
+Create a local CSV from the tracked example:
+
+```bash
+cp data/recipients.csv.example data/recipients.csv
+pnpm send recipients.csv
+```
+
+The filename may also be passed without `.csv`:
+
+```bash
+pnpm send recipients
+```
+
+CSV format:
+
+```csv
+to,cc,bcc
+customer@example.com,,
+primary@example.com,manager@example.com,audit@example.com
+"first@example.com; second@example.com",visible@example.com,"hidden-one@example.com; hidden-two@example.com"
+```
+
+Rules:
+
+- `to` is required; `cc` and `bcc` columns are optional.
+- Each row creates one SMTP message.
+- Put multiple addresses in a cell using semicolons or new lines. If using commas inside a cell, quote the cell as valid CSV.
+- Put one address per row in `to` when recipients must not see one another.
+- Every row is validated before delivery. If any row is invalid, the command reports row-level errors and sends nothing.
+- CSV files must be inside `data/`; path traversal and non-CSV input are rejected.
+- `data/*.csv` is ignored by Git, while `data/*.csv.example` remains tracked.
+- The command uses SMTP credentials directly and does not require the browser access token.
+
+The command exits non-zero when validation fails or any recipient is not accepted. An SMTP acceptance response is not proof of inbox delivery.
 
 ## Verification
 
@@ -70,47 +121,26 @@ pnpm test
 pnpm build
 ```
 
-The test suite covers recipient splitting, normalization, internationalized-domain conversion, case-insensitive deduplication, invalid addresses, submission limits, provider error handling, bounded concurrency, safe retries, authorization, rate limiting, partial failures, and idempotent replay.
+Tests mock the provider and never contact a real SMTP server. They cover address grouping and deduplication, Nodemailer result/error mapping, predefined-template delivery, conservative retries, CSV parsing and concurrency, authorization, rate limiting, partial failures, and idempotent browser replay.
 
-## Security and anti-abuse design
+## Security and delivery behavior
 
-- Every Server Action invocation performs a timing-safe access-token check before returning validation details.
-- Next.js Server Actions are POST-only and enforce same-origin `Origin`/`Host` checks. The action body is additionally capped at 32 KB.
-- The same Zod schema validates client input and untrusted server input. Sender names and subjects reject header control characters.
-- The Resend API key, verified sender, and expected access token are server-only environment variables.
-- React Email escapes operator content in the HTML body; the original message is also supplied as the plain-text alternative.
-- Recipients are normalized, deduplicated, capped, and delivered separately without CC or BCC.
-- Each authorized identity is limited to five unique submissions per 10-minute window.
-- Submission results are idempotent for 15 minutes, and every recipient receives a stable provider idempotency key for safe network retries.
-- At most three provider calls run concurrently. Only temporary errors are retried, for no more than three total attempts with exponential backoff.
-- Provider diagnostics and message bodies are not logged or returned to the browser.
+- Every Server Action call performs a timing-safe access-token check before returning validation detail.
+- Next.js Server Actions are POST-only and same-origin protected; the action body is capped at 32 KB.
+- The server treats form input as untrusted and validates it again with Zod.
+- Sender headers and email content are not accepted from the browser or CSV.
+- The browser permits five unique submissions per authorized identity per 10-minute process-local window.
+- Successful browser results are cached by submission fingerprint for 15 minutes to reduce accidental duplicates.
+- Explicit SMTP 4xx failures are retried up to three total attempts with exponential backoff.
+- Permanent SMTP rejection is not retried. Ambiguous transport failures are also not automatically retried because the server may already have accepted the message.
+- Provider diagnostics, credentials, and message bodies are not returned to the browser.
 
-For a larger organization, replace the shared access token with the existing identity provider, short-lived sessions, MFA, role-based authorization, and an audit trail. Rotate both the Resend API key and access token regularly. Monitor send rates, provider bounces, complaints, and suspicious authorization failures.
+## Current limits and production notes
 
-## Current sending limits
-
-- 10 unique recipients per submission
-- 5 unique submissions per authorized identity per 10 minutes
-- 10,000 characters per message
-- 200 characters per subject
-- 3 concurrent provider requests
-- 3 total attempts for temporary provider failures
-- 15-minute idempotency window with up to 500 recent in-process entries
-
-These conservative limits keep the complete send within a normal web request. Do not increase recipient volume substantially inside the request. For larger sends, use a durable queue, background workers, shared rate limiting, persistent per-recipient state, and webhook-driven delivery updates.
-
-## Deployment
-
-Deploy as a Node.js Next.js application and configure all three required environment variables in the production environment. Use HTTPS, restrict deployment access where possible, and configure only trusted proxy origins if a reverse proxy changes the request host. Self-hosted multi-instance deployments should also provide a consistent `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` as described by the Next.js deployment guide.
-
-The built-in rate limit is production-supported only in a single long-lived Node.js instance. Do not deploy this version across multiple instances or a scale-to-zero serverless topology when enforcement of the stated limit is required. First replace the limiter and idempotency store with atomic, durable shared adapters.
-
-Run all verification commands in CI before deployment. A real send should be tested first with a verified internal recipient and a non-production Resend key or domain.
-
-### Production limitations
-
-The MVP rate limiter and submission-result cache are process-local. They reset on restart and are not shared across serverless instances. Resend’s per-recipient idempotency keys still protect provider retries, but a multi-instance production deployment should move rate-limit counters and submission fingerprints to a durable shared store such as Redis.
-
-The app reports whether Resend accepted each message; acceptance is not proof of inbox delivery. Production systems should process Resend webhooks for delivered, bounced, and complained events and maintain suppression lists.
-
-This tool is intended for small, expected, consent-based communication. Production bulk or marketing email additionally requires documented recipient consent, unsubscribe handling, suppression lists, bounce and complaint processing, appropriate sender identification, and compliance with all applicable anti-spam and privacy laws. Consult qualified counsel for the jurisdictions where recipients reside.
+- Browser: 10 unique recipients per message.
+- CSV: 1,000 rows, 2 MB per file, and 10 unique recipients per row.
+- CSV delivery: up to three rows in flight.
+- Browser rate-limit and idempotency state are process-local and reset on restart. Replace them with atomic shared storage before multi-instance deployment.
+- Nodemailer/SMTP has no universal provider idempotency key. Re-running a CSV can resend rows that succeeded previously. For durable campaigns, add a persistent job ledger before sending at larger volume.
+- SMTP acceptance is not delivery. Production systems should process provider bounce and complaint events, maintain suppression lists, and monitor reputation.
+- Use this only for expected, consent-based email. Bulk or marketing messages may require unsubscribe handling, consent records, sender identification, and jurisdiction-specific compliance controls.

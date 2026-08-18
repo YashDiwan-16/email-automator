@@ -46,3 +46,7 @@ next-env.d.ts
 /.agents/skills/
 /.codex/skills/
 /.claude/skills/
+
+# local recipient lists
+/data/*.csv
+!/data/*.csv.example

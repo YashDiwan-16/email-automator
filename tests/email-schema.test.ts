@@ -3,103 +3,107 @@ import { describe, expect, it } from "vitest";
 import {
   emailComposerSchema,
   MAX_RECIPIENTS,
-  parseRecipientList,
+  parseAddressList,
 } from "@/lib/email/schema";
 
 const validInput = {
   accessToken: "a-secure-access-token-value",
-  fromName: "Product team",
-  replyTo: "reply@example.com",
-  recipients: "first@example.com",
-  subject: "A useful update",
-  message: "Hello from the product team.",
+  to: "first@example.com",
+  cc: "",
+  bcc: "",
   idempotencyKey: "9f1e4648-138f-4472-9913-11aebf646956",
 };
 
-describe("parseRecipientList", () => {
-  it("splits comma and newline separated addresses", () => {
+describe("parseAddressList", () => {
+  it("splits comma, semicolon, and newline separated addresses", () => {
     expect(
-      parseRecipientList("first@example.com, second@example.com\nthird@example.com"),
+      parseAddressList(
+        "first@example.com, second@example.com; third@example.com\nfourth@example.com",
+      ),
     ).toEqual({
-      recipients: [
+      addresses: [
         "first@example.com",
         "second@example.com",
         "third@example.com",
+        "fourth@example.com",
       ],
-      invalidRecipients: [],
+      invalidAddresses: [],
     });
   });
 
   it("normalizes domains and removes duplicates case-insensitively", () => {
     expect(
-      parseRecipientList(
+      parseAddressList(
         " Alice@EXAMPLE.COM, alice@example.com, bob@b\u00fccher.de ",
       ),
     ).toEqual({
-      recipients: ["Alice@example.com", "bob@xn--bcher-kva.de"],
-      invalidRecipients: [],
+      addresses: ["Alice@example.com", "bob@xn--bcher-kva.de"],
+      invalidAddresses: [],
     });
   });
 
   it("reports invalid addresses without discarding valid ones", () => {
-    expect(parseRecipientList("valid@example.com, not-an-email, @example.com")).toEqual(
-      {
-        recipients: ["valid@example.com"],
-        invalidRecipients: ["not-an-email", "@example.com"],
-      },
-    );
+    expect(
+      parseAddressList("valid@example.com, not-an-email, @example.com"),
+    ).toEqual({
+      addresses: ["valid@example.com"],
+      invalidAddresses: ["not-an-email", "@example.com"],
+    });
   });
 });
 
 describe("emailComposerSchema", () => {
-  it("returns normalized recipients and reply-to addresses", () => {
+  it("normalizes and deduplicates across To, CC, and BCC", () => {
     const result = emailComposerSchema.parse({
       ...validInput,
-      replyTo: "Owner@EXAMPLE.COM",
-      recipients: "One@Example.COM, one@example.com",
+      to: "Owner@EXAMPLE.COM",
+      cc: "owner@example.com, teammate@example.com",
+      bcc: "TEAMMATE@example.com; audit@example.com",
     });
 
-    expect(result.replyTo).toBe("Owner@example.com");
-    expect(result.recipients).toEqual(["One@example.com"]);
+    expect(result.to).toEqual(["Owner@example.com"]);
+    expect(result.cc).toEqual(["teammate@example.com"]);
+    expect(result.bcc).toEqual(["audit@example.com"]);
   });
 
-  it("rejects invalid recipients and lists the invalid values", () => {
+  it("requires at least one valid To address while allowing empty CC and BCC", () => {
+    expect(emailComposerSchema.safeParse(validInput).success).toBe(true);
+
+    const result = emailComposerSchema.safeParse({ ...validInput, to: "" });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.to).toContain(
+      "Enter at least one valid To address.",
+    );
+  });
+
+  it("associates invalid addresses with their field", () => {
     const result = emailComposerSchema.safeParse({
       ...validInput,
-      recipients: "ok@example.com, broken-address",
+      cc: "ok@example.com, broken-address",
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.flatten().fieldErrors.recipients).toContain(
+    expect(result.error?.flatten().fieldErrors.cc).toContain(
       "Invalid email address: broken-address",
     );
   });
 
-  it("enforces the conservative recipient limit after deduplication", () => {
-    const recipients = Array.from(
-      { length: MAX_RECIPIENTS + 1 },
+  it("enforces the conservative combined recipient limit after deduplication", () => {
+    const to = Array.from(
+      { length: MAX_RECIPIENTS },
       (_, index) => `person-${index}@example.com`,
     ).join(",");
 
-    const result = emailComposerSchema.safeParse({ ...validInput, recipients });
+    const result = emailComposerSchema.safeParse({
+      ...validInput,
+      to,
+      cc: "person-0@example.com, over-limit@example.com",
+    });
 
     expect(result.success).toBe(false);
-    expect(result.error?.flatten().fieldErrors.recipients).toContain(
-      `Send to no more than ${MAX_RECIPIENTS} recipients at once.`,
+    expect(result.error?.flatten().fieldErrors.to).toContain(
+      `Send to no more than ${MAX_RECIPIENTS} unique recipients at once.`,
     );
-  });
-
-  it("rejects header control characters in sender names and subjects", () => {
-    const senderResult = emailComposerSchema.safeParse({
-      ...validInput,
-      fromName: "Sender\nBcc: victim@example.com",
-    });
-    const subjectResult = emailComposerSchema.safeParse({
-      ...validInput,
-      subject: "Hello\r\nBcc: victim@example.com",
-    });
-
-    expect(senderResult.success).toBe(false);
-    expect(subjectResult.success).toBe(false);
   });
 });

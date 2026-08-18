@@ -3,17 +3,21 @@
 import { useEffect, useRef } from "react";
 
 interface SendConfirmationDialogProps {
+  bccCount: number;
+  ccCount: number;
   isOpen: boolean;
-  recipientCount: number;
   onCancel: () => void;
   onConfirm: () => void;
+  toCount: number;
 }
 
 export function SendConfirmationDialog({
+  bccCount,
+  ccCount,
   isOpen,
-  recipientCount,
   onCancel,
   onConfirm,
+  toCount,
 }: SendConfirmationDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -67,14 +71,16 @@ export function SendConfirmationDialog({
           id="send-confirmation-title"
           className="text-xl font-semibold tracking-[-0.02em]"
         >
-          Send {recipientCount} separate emails?
+          Send one email to {toCount + ccCount + bccCount} recipients?
         </h2>
         <p
           id="send-confirmation-description"
           className="mt-2 text-sm leading-6 text-slate-600"
         >
-          Each recipient will receive an individual message, so their address is
-          never visible to anyone else. Review your content before continuing.
+          {toCount} To and {ccCount} CC addresses will be visible in the message.
+          {" "}
+          {bccCount} BCC addresses will remain hidden. The configured template
+          will be sent exactly as defined in code.
         </p>
         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
@@ -83,14 +89,14 @@ export function SendConfirmationDialog({
             className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
             onClick={onCancel}
           >
-            Review message
+            Review recipients
           </button>
           <button
             type="button"
             className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
             onClick={onConfirm}
           >
-            Yes, send separately
+            Yes, send email
           </button>
         </div>
       </div>

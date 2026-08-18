@@ -1,7 +1,7 @@
 "use server";
 
 import { EnvironmentConfigurationError, getServerEnvironment } from "@/lib/env";
-import { ResendEmailProvider } from "@/lib/email/resend-provider";
+import { createNodemailerEmailProvider } from "@/lib/email/nodemailer-provider";
 import { executeSendEmailWorkflow } from "@/lib/email/workflow";
 import { InMemoryIdempotencyStore } from "@/lib/idempotency";
 import { FixedWindowRateLimiter } from "@/lib/rate-limit";
@@ -24,11 +24,12 @@ export async function sendEmail(
     const environment = getServerEnvironment();
 
     return await executeSendEmailWorkflow(input, {
-      expectedAccessToken: environment.EMAIL_AUTOMATOR_ACCESS_TOKEN,
+      expectedAccessToken: environment.accessToken,
       idempotencyStore,
-      provider: new ResendEmailProvider(environment.RESEND_API_KEY),
+      provider: createNodemailerEmailProvider(environment.smtp),
       rateLimiter,
-      senderEmail: environment.RESEND_FROM_EMAIL,
+      sender: environment.sender,
+      replyTo: environment.replyTo,
     });
   } catch (error) {
     if (error instanceof EnvironmentConfigurationError) {

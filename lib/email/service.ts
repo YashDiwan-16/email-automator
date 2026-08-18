@@ -1,43 +1,28 @@
-import { createHash } from "node:crypto";
-
-import { render } from "react-email";
-
-import type { ValidatedEmailComposerInput } from "@/lib/email/schema";
 import type { DeliverySummary, RecipientDeliveryResult } from "@/types/email";
 
-import type { EmailProvider, ProviderMessage } from "./provider";
-import { EmailMessageTemplate } from "./template";
+import type { EmailProvider, ProviderMessage, ProviderSendResult } from "./provider";
+import { PREDEFINED_EMAIL_TEMPLATE } from "./template";
 
-export type EmailBatchInput = Omit<
-  ValidatedEmailComposerInput,
-  "accessToken"
-> & {
-  senderEmail: string;
-};
+export interface PredefinedEmailInput {
+  sender: {
+    email: string;
+    name: string;
+  };
+  replyTo?: string;
+  to: string[];
+  cc: string[];
+  bcc: string[];
+}
 
-interface SendEmailBatchOptions {
+interface SendPredefinedEmailOptions {
   provider: EmailProvider;
-  input: EmailBatchInput;
-  concurrency?: number;
+  input: PredefinedEmailInput;
   maximumAttempts?: number;
   retryDelayMs?: number;
 }
 
-const DEFAULT_CONCURRENCY = 3;
 const DEFAULT_MAXIMUM_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 200;
-
-function createProviderIdempotencyKey(
-  submissionKey: string,
-  recipient: string,
-): string {
-  const recipientHash = createHash("sha256")
-    .update(recipient.toLocaleLowerCase("en-US"))
-    .digest("hex")
-    .slice(0, 16);
-
-  return `${submissionKey}:${recipientHash}`;
-}
 
 async function wait(milliseconds: number): Promise<void> {
   if (milliseconds <= 0) {
@@ -47,113 +32,96 @@ async function wait(milliseconds: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function deliverRecipient(
-  provider: EmailProvider,
-  message: ProviderMessage,
-  maximumAttempts: number,
-  retryDelayMs: number,
-): Promise<RecipientDeliveryResult> {
-  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
-    try {
-      const result = await provider.send(message);
-
-      if (result.status === "accepted") {
-        return {
-          recipient: message.to,
-          status: "accepted",
-          providerMessageId: result.messageId,
-        };
-      }
-
-      if (result.failureKind === "permanent") {
-        return {
-          recipient: message.to,
-          status: "failed",
-          reason: "provider_rejected",
-        };
-      }
-    } catch {
-      // Network and unknown provider exceptions are retried without exposing details.
-    }
-
-    if (attempt < maximumAttempts) {
-      await wait(retryDelayMs * 2 ** (attempt - 1));
-    }
-  }
-
-  return {
-    recipient: message.to,
-    status: "failed",
-    reason: "temporary_provider_failure",
-  };
+function allRecipients(input: PredefinedEmailInput): string[] {
+  return [...input.to, ...input.cc, ...input.bcc];
 }
 
-async function mapWithConcurrency<T, TResult>(
-  values: T[],
-  concurrency: number,
-  operation: (value: T) => Promise<TResult>,
-): Promise<TResult[]> {
-  const results = new Array<TResult>(values.length);
-  let nextIndex = 0;
-
-  async function worker(): Promise<void> {
-    while (nextIndex < values.length) {
-      const currentIndex = nextIndex;
-      nextIndex += 1;
-      results[currentIndex] = await operation(values[currentIndex] as T);
-    }
-  }
-
-  const workerCount = Math.min(Math.max(1, concurrency), values.length);
-  await Promise.all(Array.from({ length: workerCount }, () => worker()));
-
-  return results;
-}
-
-export async function sendEmailBatch({
-  provider,
-  input,
-  concurrency = DEFAULT_CONCURRENCY,
-  maximumAttempts = DEFAULT_MAXIMUM_ATTEMPTS,
-  retryDelayMs = DEFAULT_RETRY_DELAY_MS,
-}: SendEmailBatchOptions): Promise<DeliverySummary> {
-  const html = await render(
-    EmailMessageTemplate({
-      fromName: input.fromName,
-      message: input.message,
-      subject: input.subject,
-    }),
+function deliverySummaryFromCompletedSend(
+  recipients: string[],
+  result: Extract<ProviderSendResult, { status: "completed" }>,
+): DeliverySummary {
+  const accepted = new Set(
+    result.accepted.map((address) => address.toLocaleLowerCase("en-US")),
   );
-
-  const recipientResults = await mapWithConcurrency(
-    input.recipients,
-    concurrency,
+  const recipientResults: RecipientDeliveryResult[] = recipients.map(
     (recipient) =>
-      deliverRecipient(
-        provider,
-        {
-          sender: { email: input.senderEmail, name: input.fromName },
-          to: recipient,
-          replyTo: input.replyTo,
-          subject: input.subject,
-          html,
-          text: input.message,
-          idempotencyKey: createProviderIdempotencyKey(
-            input.idempotencyKey,
+      accepted.has(recipient.toLocaleLowerCase("en-US"))
+        ? {
             recipient,
-          ),
-        },
-        Math.max(1, maximumAttempts),
-        Math.max(0, retryDelayMs),
-      ),
+            status: "accepted",
+            providerMessageId: result.messageId,
+          }
+        : {
+            recipient,
+            status: "failed",
+            reason: "provider_rejected",
+          },
   );
-  const acceptedCount = recipientResults.filter(
+
+  return summarize(recipientResults);
+}
+
+function failedDeliverySummary(
+  recipients: string[],
+  reason: "delivery_status_unknown" | "provider_rejected" | "temporary_provider_failure",
+): DeliverySummary {
+  return summarize(
+    recipients.map((recipient) => ({ recipient, status: "failed", reason })),
+  );
+}
+
+function summarize(recipients: RecipientDeliveryResult[]): DeliverySummary {
+  const acceptedCount = recipients.filter(
     (result) => result.status === "accepted",
   ).length;
 
   return {
     acceptedCount,
-    failedCount: recipientResults.length - acceptedCount,
-    recipients: recipientResults,
+    failedCount: recipients.length - acceptedCount,
+    recipients,
   };
+}
+
+export async function sendPredefinedEmail({
+  provider,
+  input,
+  maximumAttempts = DEFAULT_MAXIMUM_ATTEMPTS,
+  retryDelayMs = DEFAULT_RETRY_DELAY_MS,
+}: SendPredefinedEmailOptions): Promise<DeliverySummary> {
+  const recipients = allRecipients(input);
+  const message: ProviderMessage = {
+    ...input,
+    subject: PREDEFINED_EMAIL_TEMPLATE.subject,
+    html: PREDEFINED_EMAIL_TEMPLATE.html,
+    text: PREDEFINED_EMAIL_TEMPLATE.text,
+  };
+  const attempts = Math.max(1, maximumAttempts);
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let result: ProviderSendResult;
+
+    try {
+      result = await provider.send(message);
+    } catch {
+      return failedDeliverySummary(recipients, "delivery_status_unknown");
+    }
+
+    if (result.status === "completed") {
+      return deliverySummaryFromCompletedSend(recipients, result);
+    }
+
+    if (result.failureKind === "permanent") {
+      return failedDeliverySummary(recipients, "provider_rejected");
+    }
+
+    if (result.failureKind === "uncertain") {
+      return failedDeliverySummary(recipients, "delivery_status_unknown");
+    }
+
+    if (attempt < attempts) {
+      await wait(Math.max(0, retryDelayMs) * 2 ** (attempt - 1));
+    }
+  }
+
+  return failedDeliverySummary(recipients, "temporary_provider_failure");
 }

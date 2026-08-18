@@ -1,4 +1,5 @@
 import { EmailComposer } from "@/components/email-composer";
+import { PREDEFINED_EMAIL_TEMPLATE } from "@/lib/email/template";
 
 export default function Home() {
   return (
@@ -38,15 +39,15 @@ export default function Home() {
                 Authorized sending only
               </div>
               <h1 className="text-balance text-4xl font-semibold leading-[1.08] tracking-[-0.045em] text-slate-950 sm:text-5xl">
-                Thoughtful email,
-                <span className="text-violet-600"> delivered privately.</span>
+                One approved template,
+                <span className="text-violet-600"> delivered reliably.</span>
               </h1>
               <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
-                Compose once and send an individual, polished message to every
-                recipient—without exposing anyone&apos;s address.
+                Add To, CC, and BCC recipients, then send the predefined message
+                through your configured SMTP service.
               </p>
             </div>
-            <EmailComposer />
+            <EmailComposer templateSubject={PREDEFINED_EMAIL_TEMPLATE.subject} />
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-8 lg:pt-40">
@@ -55,8 +56,9 @@ export default function Home() {
               <ul className="mt-4 space-y-4 text-sm text-slate-600">
                 {[
                   "Up to 10 unique recipients",
-                  "One private email per address",
-                  "Safe retry and duplicate protection",
+                  "To and CC visibility is explicit",
+                  "BCC addresses remain hidden",
+                  "Conservative retry protection",
                   "Server-side validation and rate limits",
                 ].map((item) => (
                   <li key={item} className="flex gap-3">
@@ -87,7 +89,7 @@ export default function Home() {
         </div>
 
         <footer className="py-10 text-center text-xs text-slate-400">
-          Secure delivery powered by Resend
+          SMTP delivery powered by Nodemailer
         </footer>
       </div>
     </main>

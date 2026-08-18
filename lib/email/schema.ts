@@ -40,17 +40,17 @@ const normalizedEmailSchema = z
   .transform(normalizeEmailAddress)
   .pipe(z.email({ error: "Enter a valid email address." }));
 
-export interface ParsedRecipientList {
-  recipients: string[];
-  invalidRecipients: string[];
+export interface ParsedAddressList {
+  addresses: string[];
+  invalidAddresses: string[];
 }
 
-export function parseRecipientList(value: string): ParsedRecipientList {
-  const recipients: string[] = [];
-  const invalidRecipients: string[] = [];
+export function parseAddressList(value: string): ParsedAddressList {
+  const addresses: string[] = [];
+  const invalidAddresses: string[] = [];
   const seen = new Set<string>();
 
-  for (const candidate of value.split(/[,\n]/u)) {
+  for (const candidate of value.split(/[,;\r\n]/u)) {
     const trimmed = candidate.trim();
     if (!trimmed) {
       continue;
@@ -58,76 +58,125 @@ export function parseRecipientList(value: string): ParsedRecipientList {
 
     const parsed = normalizedEmailSchema.safeParse(trimmed);
     if (!parsed.success) {
-      invalidRecipients.push(trimmed);
+      invalidAddresses.push(trimmed);
       continue;
     }
 
     const deduplicationKey = parsed.data.toLocaleLowerCase("en-US");
     if (!seen.has(deduplicationKey)) {
       seen.add(deduplicationKey);
-      recipients.push(parsed.data);
+      addresses.push(parsed.data);
     }
   }
 
-  return { recipients, invalidRecipients };
+  return { addresses, invalidAddresses };
 }
 
-const recipientListSchema = z
-  .string()
-  .max(5_000, { error: "The recipient list is too long." })
-  .transform((value, context) => {
-    const parsed = parseRecipientList(value);
+type AddressField = "to" | "cc" | "bcc";
 
-    if (parsed.recipients.length === 0) {
+const rawAddressGroupsSchema = z.object({
+  to: z.string().max(5_000, { error: "The To list is too long." }),
+  cc: z.string().max(5_000, { error: "The CC list is too long." }),
+  bcc: z.string().max(5_000, { error: "The BCC list is too long." }),
+});
+
+function deduplicateAddressGroups(
+  groups: Record<AddressField, string[]>,
+): Record<AddressField, string[]> {
+  const seen = new Set<string>();
+
+  return Object.fromEntries(
+    (["to", "cc", "bcc"] as const).map((field) => [
+      field,
+      groups[field].filter((address) => {
+        const key = address.toLocaleLowerCase("en-US");
+        if (seen.has(key)) {
+          return false;
+        }
+
+        seen.add(key);
+        return true;
+      }),
+    ]),
+  ) as Record<AddressField, string[]>;
+}
+
+export const emailAddressGroupsSchema = rawAddressGroupsSchema.transform(
+  (input, context) => {
+    const parsedGroups = {
+      to: parseAddressList(input.to),
+      cc: parseAddressList(input.cc),
+      bcc: parseAddressList(input.bcc),
+    };
+
+    for (const field of ["to", "cc", "bcc"] as const) {
+      for (const invalidAddress of parsedGroups[field].invalidAddresses) {
+        context.addIssue({
+          code: "custom",
+          path: [field],
+          message: `Invalid email address: ${invalidAddress}`,
+        });
+      }
+
+      if (field === "to" && parsedGroups.to.addresses.length === 0) {
+        context.addIssue({
+          code: "custom",
+          path: ["to"],
+          message: "Enter at least one valid To address.",
+        });
+      }
+    }
+
+    const groups = deduplicateAddressGroups({
+      to: parsedGroups.to.addresses,
+      cc: parsedGroups.cc.addresses,
+      bcc: parsedGroups.bcc.addresses,
+    });
+    const recipientCount = groups.to.length + groups.cc.length + groups.bcc.length;
+
+    if (recipientCount > MAX_RECIPIENTS) {
       context.addIssue({
         code: "custom",
-        message: "Enter at least one valid recipient.",
+        path: ["to"],
+        message: `Send to no more than ${MAX_RECIPIENTS} unique recipients at once.`,
       });
     }
 
-    for (const invalidRecipient of parsed.invalidRecipients) {
-      context.addIssue({
-        code: "custom",
-        message: `Invalid email address: ${invalidRecipient}`,
-      });
-    }
+    return groups;
+  },
+);
 
-    if (parsed.recipients.length > MAX_RECIPIENTS) {
-      context.addIssue({
-        code: "custom",
-        message: `Send to no more than ${MAX_RECIPIENTS} recipients at once.`,
-      });
-    }
-
-    return parsed.recipients;
-  });
-
-export const emailComposerSchema = z.object({
+const rawEmailComposerSchema = rawAddressGroupsSchema.extend({
   accessToken: z
     .string()
     .min(16, { error: "Enter your access token." })
     .max(256, { error: "The access token is too long." }),
-  fromName: z
-    .string()
-    .trim()
-    .min(1, { error: "Enter a sender name." })
-    .max(100, { error: "Use 100 characters or fewer." })
-    .regex(/^[^<>\r\n]+$/u, { error: "Use a valid sender name." }),
-  replyTo: normalizedEmailSchema,
-  recipients: recipientListSchema,
-  subject: z
-    .string()
-    .trim()
-    .min(1, { error: "Enter a subject." })
-    .max(200, { error: "Use 200 characters or fewer." })
-    .regex(/^[^\r\n]+$/u, { error: "The subject must be a single line." }),
-  message: z
-    .string()
-    .trim()
-    .min(1, { error: "Enter a message." })
-    .max(10_000, { error: "Use 10,000 characters or fewer." }),
   idempotencyKey: z.uuid({ error: "Start a new send and try again." }),
 });
+
+export const emailComposerSchema = rawEmailComposerSchema.transform(
+  (input, context) => {
+    const addressGroups = emailAddressGroupsSchema.safeParse(input);
+
+    if (!addressGroups.success) {
+      for (const issue of addressGroups.error.issues) {
+        context.addIssue({
+          code: "custom",
+          path: issue.path,
+          message: issue.message,
+        });
+      }
+    }
+
+    return {
+      accessToken: input.accessToken,
+      ...(addressGroups.success
+        ? addressGroups.data
+        : { to: [], cc: [], bcc: [] }),
+      idempotencyKey: input.idempotencyKey,
+    };
+  },
+);
 
 export type EmailComposerInput = z.input<typeof emailComposerSchema>;
 export type ValidatedEmailComposerInput = z.output<typeof emailComposerSchema>;
