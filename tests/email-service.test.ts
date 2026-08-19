@@ -71,7 +71,7 @@ describe("sendPredefinedEmail", () => {
     expect(messages[0]?.text).toContain("₹10 lakh first prize");
     expect(messages[0]?.text).toContain("28 Aug 2026");
     expect(messages[0]?.text).toContain(
-      "Warm Regards\nSankar Lakshmanan\nEduDeca – Whiz360\nFounder | alexis36sg@gmail.com",
+      "Warm Regards\nSankar Lakshmanan\nEduDeca – Whiz360\nFounder",
     );
     expect(messages[0]?.text).not.toContain("RDM University");
     expect(messages[0]?.text).not.toContain("Mr. Sankar");
@@ -84,11 +84,11 @@ describe("sendPredefinedEmail", () => {
     expect(messages[0]?.html).toContain("Sankar Lakshmanan");
     expect(messages[0]?.html).toContain("CLASS XI &amp; XII SCIENCE");
     expect(messages[0]?.html).toContain("Founder");
+    expect(messages[0]?.html).not.toContain("alexis36sg@gmail.com");
     expect(messages[0]?.html).toContain("#01262E");
     expect(messages[0]?.html).toContain('src="cid:edudeca-logo"');
     expect(messages[0]?.html).not.toContain(">MS<");
     expect(messages[0]?.html).not.toContain("Designation");
-    expect(messages[0]?.html).toContain("alexis36sg@gmail.com");
     expect(messages[0]?.html).toContain("EduDeca – Whiz360");
     expect(messages[0]?.html).not.toContain("RDM University");
     expect(messages[0]?.html).not.toContain("8010354828");

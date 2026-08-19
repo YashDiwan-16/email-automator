@@ -126,7 +126,6 @@ const EMAIL_SIGNATURE = {
   name: "Sankar Lakshmanan",
   organization: "EduDeca – Whiz360",
   designation: "Founder",
-  email: "alexis36sg@gmail.com",
 } as const;
 
 /** Update the version whenever the approved subject or body changes. */
@@ -203,7 +202,7 @@ export function createPredefinedEmailContent(
     signature.closing,
     signature.name,
     signature.organization,
-    `${signature.designation} | ${signature.email}`,
+    signature.designation,
   ].join("\n");
 
   return {
@@ -491,7 +490,7 @@ export function PredefinedEmailTemplate({
                 {content.signature.organization}
               </Text>
               <Text style={styles.signatureContact}>
-                {content.signature.designation} | {content.signature.email}
+                {content.signature.designation}
               </Text>
             </Section>
           </Section>

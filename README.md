@@ -22,9 +22,8 @@ send a real email.
 The approved email is the EduDeca – Whiz360 Science-college introduction and
 invitation.
 The `university` value replaces the recipient college/school placeholder. Its
-default closing is fixed as Sankar Lakshmanan, EduDeca – Whiz360, Founder, and
-`alexis36sg@gmail.com`. These closing details are not entered through the
-browser or CSV.
+default closing is fixed as Sankar Lakshmanan, EduDeca – Whiz360, and Founder.
+These closing details are not entered through the browser or CSV.
 
 Each CSV row creates a separate email:
 
