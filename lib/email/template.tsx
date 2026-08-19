@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import {
   Body,
   Button,
@@ -5,8 +7,8 @@ import {
   Container,
   Head,
   Heading,
-  Hr,
   Html,
+  Img,
   Preview,
   Row,
   Section,
@@ -16,24 +18,26 @@ import {
 import type { EmailPersonalization } from "./schema";
 
 const BRAND = {
-  ink: "#10243E",
-  inkSoft: "#1A3555",
-  orange: "#F47A3C",
-  orangeSoft: "#FFF1E8",
-  teal: "#25A99A",
-  tealSoft: "#EAF8F5",
-  paper: "#F4F1EA",
+  ink: "#01262E",
+  inkSoft: "#173552",
+  blue: "#378ADD",
+  blueDark: "#1B4D89",
+  blueSoft: "#EEF4FA",
+  goldSoft: "#FFF5E7",
+  teal: "#2EC4B6",
+  tealSoft: "#EDF9F7",
+  paper: "#EEF3F8",
   white: "#FFFFFF",
-  text: "#223044",
-  muted: "#637083",
-  line: "#DFE5EA",
+  text: "#16202D",
+  muted: "#607080",
+  line: "#DDE7F0",
 } as const;
 
 const CHALLENGE_AREAS = [
   {
     title: "Core Science",
-    accent: BRAND.orange,
-    background: BRAND.orangeSoft,
+    accent: BRAND.blueDark,
+    background: "#F7FAFC",
     details: [
       { label: "Mathematics stream:", value: "PCM + Applied Mathematics" },
       { label: "Biology stream:", value: "PCB + Biotechnology" },
@@ -41,8 +45,8 @@ const CHALLENGE_AREAS = [
   },
   {
     title: "Core Skills",
-    accent: BRAND.teal,
-    background: BRAND.tealSoft,
+    accent: BRAND.blueDark,
+    background: "#F7FAFC",
     details: [
       {
         value:
@@ -55,29 +59,34 @@ const CHALLENGE_AREAS = [
 const LEVELS = [
   {
     level: "1–2",
-    format:
-      "10 questions • 10 minutes. 1 question from each of 10 disciplines; up to 10 attempts.",
+    format: "10 questions • 10 minutes",
+    formatNote: "1 question from each of 10 disciplines; up to 10 attempts.",
     access: "FREE • Digital / open",
+    accessNote: null,
   },
   {
     level: "3",
-    format:
-      "30 questions • 30 minutes. 3 questions from each discipline; up to 5 attempts to qualify.",
+    format: "30 questions • 30 minutes",
+    formatNote: "3 questions from each discipline; up to 5 attempts to qualify.",
     access: "FREE • Digital / open",
+    accessNote: null,
   },
   {
     level: "4–6",
-    format:
-      "Approx. 30–60 questions • 30–90 minutes. Online tests conducted at the participating institution.",
-    access:
-      "₹999 for Levels 4–6. Strict physical proctoring • attendance verified • no AI, mobiles, reference material or external aid.",
+    format: "Approx. 30–60 questions • 30–90 minutes",
+    formatNote: "Online tests conducted at the participating institution.",
+    access: "₹999 for Levels 4–6",
+    accessNote:
+      "Strict physical proctoring • attendance verified • no AI, mobiles, reference material or external aid.",
   },
   {
     level: "7–10",
     format:
-      "Advanced Super League pathway • 90–180 minute assessments at designated centres.",
+      "Advanced Super League pathway • 90–180 minute assessments at designated centres",
+    formatNote: null,
     access:
-      "Proctored national pathway • higher-level participation may be supported by colleges / sponsors / donors.",
+      "Proctored national pathway • higher-level participation may be supported by colleges / sponsors / donors",
+    accessNote: null,
   },
 ] as const;
 
@@ -95,7 +104,7 @@ const BENEFITS = [
   },
   {
     title: "For Colleges / Schools",
-    accent: BRAND.orange,
+    accent: BRAND.blue,
     items: [
       "Identify hidden, high-potential talent",
       "Create healthy internal competition",
@@ -107,24 +116,25 @@ const BENEFITS = [
 ] as const;
 
 const KEY_DATES = [
-  { label: "Interest Reply", value: "28 Aug 2026", color: BRAND.orangeSoft },
+  { label: "Interest Reply", value: "28 Aug 2026", color: BRAND.goldSoft },
   { label: "Detailed Pack", value: "By end-August", color: BRAND.tealSoft },
-  { label: "Final Confirmation", value: "15 Sep 2026", color: "#EEF3F9" },
+  { label: "Final Confirmation", value: "15 Sep 2026", color: BRAND.blueSoft },
 ] as const;
 
 const EMAIL_SIGNATURE = {
   closing: "Warm Regards",
-  name: "Mr. Sankar",
+  name: "Sankar Lakshmanan",
   organization: "EduDeca – Whiz360",
+  designation: "Founder",
   email: "alexis36sg@gmail.com",
 } as const;
 
 /** Update the version whenever the approved subject or body changes. */
 export const PREDEFINED_EMAIL_TEMPLATE = {
-  version: "2026-08-18.7",
+  version: "2026-08-19.1",
   subject: "EduDeca – Invitation to Participate",
   preview:
-    "Invitation for Class XI & XII students: EduDeca – India's Whiz360 Knowledge Challenge.",
+    "Invitation for Class XI & XII Science students: EduDeca – India's Whiz360 Knowledge Challenge.",
 } as const;
 
 export interface PredefinedEmailTemplateInput {
@@ -147,7 +157,7 @@ export function createPredefinedEmailContent(
   const text = [
     "Dear Principal / Head of Institution,",
     "",
-    `We invite ${personalization.university} to express interest in participating in EduDeca – Whiz360, a 360° Knowledge Challenge for Class XI and XII students across India.`,
+    `We invite ${personalization.university} to express interest in participating in EduDeca – Whiz360, a 360° Knowledge Challenge for Class XI and XII Science students across India.`,
     "",
     "The objective is to create a prestigious, scalable platform that rewards academic depth while also testing aptitude, analytical ability, entrepreneurship, financial literacy, general knowledge and consistency. It encourages students to look beyond bookish knowledge and rote learning.",
     "",
@@ -166,7 +176,9 @@ export function createPredefinedEmailContent(
     ...LEVELS.flatMap((level) => [
       `Levels ${level.level}`,
       level.format,
+      ...(level.formatNote ? [level.formatNote] : []),
       level.access,
+      ...(level.accessNote ? [level.accessNote] : []),
       "",
     ]),
     "Why should your institution participate?",
@@ -191,7 +203,7 @@ export function createPredefinedEmailContent(
     signature.closing,
     signature.name,
     signature.organization,
-    signature.email,
+    `${signature.designation} | ${signature.email}`,
   ].join("\n");
 
   return {
@@ -206,20 +218,11 @@ export function createPredefinedEmailContent(
   };
 }
 
-function SectionHeading({
-  eyebrow,
-  title,
-}: {
-  eyebrow: string;
-  title: string;
-}) {
+function SectionHeading({ title }: { title: string }) {
   return (
-    <>
-      <Text style={styles.sectionEyebrow}>{eyebrow}</Text>
-      <Heading as="h2" style={styles.sectionHeading}>
-        {title}
-      </Heading>
-    </>
+    <Heading as="h2" style={styles.sectionHeading}>
+      {title}
+    </Heading>
   );
 }
 
@@ -249,15 +252,19 @@ export function PredefinedEmailTemplate({
           <Section style={styles.brandBar}>
             <Row>
               <Column>
-                <Text style={styles.wordmark}>
-                  Edu<span style={styles.wordmarkAccent}>Deca</span>
-                </Text>
+                <Img
+                  alt="EduDeca"
+                  height="70"
+                  src="cid:edudeca-logo"
+                  style={styles.headerLogo}
+                  width="200"
+                />
                 <Text style={styles.tagline}>
                   INDIA&apos;S WHIZ360 KNOWLEDGE CHALLENGE
                 </Text>
               </Column>
               <Column align="right" style={styles.audienceColumn}>
-                <Text style={styles.audiencePill}>CLASS XI &amp; XII</Text>
+                <Text style={styles.audiencePill}>CLASS XI &amp; XII SCIENCE</Text>
               </Column>
             </Row>
           </Section>
@@ -287,7 +294,8 @@ export function PredefinedEmailTemplate({
             <Text style={styles.paragraph}>
               We invite <strong>{content.university}</strong> to express interest
               in participating in <strong>EduDeca – Whiz360</strong>, a 360°
-              Knowledge Challenge for Class XI and XII students across India.
+              Knowledge Challenge for Class XI and XII Science students across
+              India.
             </Text>
             <Text style={styles.paragraphLast}>
               The objective is to create a prestigious, scalable platform that
@@ -299,53 +307,75 @@ export function PredefinedEmailTemplate({
           </Section>
 
           <Section className="email-pad" style={styles.contentSection}>
-            <SectionHeading eyebrow="01 · THE CHALLENGE" title="What does Whiz360 test?" />
+            <SectionHeading title="What does Whiz360 test?" />
             <Row>
               {content.challengeAreas.map((area, index) => (
-                <Column
-                  key={area.title}
-                  className="email-column"
-                  style={{
-                    ...styles.featureCard,
-                    backgroundColor: area.background,
-                    borderTopColor: area.accent,
-                    width: index === 0 ? "49%" : "49%",
-                  }}
-                  valign="top"
-                >
-                  <Text style={{ ...styles.cardTitle, color: area.accent }}>
-                    {area.title}
-                  </Text>
-                  {area.details.map((detail) => (
-                    <Text key={detail.value} style={styles.cardText}>
-                      {"label" in detail ? <strong>{detail.label} </strong> : null}
-                      {detail.value}
+                <Fragment key={area.title}>
+                  {index > 0 ? (
+                    <Column className="email-spacer" style={styles.columnSpacer} />
+                  ) : null}
+                  <Column
+                    className="email-column"
+                    style={{
+                      ...styles.featureCard,
+                      backgroundColor: area.background,
+                      width: "49%",
+                    }}
+                    valign="top"
+                  >
+                    <Text style={{ ...styles.cardTitle, color: area.accent }}>
+                      {area.title}
                     </Text>
-                  ))}
-                </Column>
+                    {area.details.map((detail) => (
+                      <Text key={detail.value} style={styles.cardText}>
+                        {"label" in detail ? (
+                          <strong>{detail.label} </strong>
+                        ) : null}
+                        {detail.value}
+                      </Text>
+                    ))}
+                  </Column>
+                </Fragment>
               ))}
             </Row>
           </Section>
 
           <Section className="email-pad" style={styles.contentSection}>
-            <SectionHeading eyebrow="02 · THE PATH" title="The 10-level journey" />
+            <SectionHeading title="The 10-level journey" />
             <Text style={styles.sectionIntro}>
               Low-friction entry → progressive challenge → proctored merit →
               national recognition.
             </Text>
             <Section style={styles.journeyFrame}>
+              <Row style={styles.journeyHeader}>
+                <Column style={styles.journeyHeaderLevel}>LEVELS</Column>
+                <Column style={styles.journeyHeaderFormat}>FORMAT</Column>
+                <Column style={styles.journeyHeaderAccess}>
+                  ACCESS / INTEGRITY
+                </Column>
+              </Row>
               {content.levels.map((level, index) => (
                 <Row
                   key={level.level}
-                  style={index === content.levels.length - 1 ? undefined : styles.journeyRow}
+                  style={{
+                    ...styles.journeyRow,
+                    ...(index % 2 === 1 ? styles.journeyRowAlternate : {}),
+                  }}
                 >
                   <Column style={styles.levelColumn} valign="top">
                     <Text style={styles.levelNumber}>{level.level}</Text>
-                    <Text style={styles.levelLabel}>LEVELS</Text>
                   </Column>
-                  <Column style={styles.levelDetails} valign="top">
+                  <Column style={styles.levelFormatColumn} valign="top">
                     <Text style={styles.levelFormat}>{level.format}</Text>
+                    {level.formatNote ? (
+                      <Text style={styles.levelNote}>{level.formatNote}</Text>
+                    ) : null}
+                  </Column>
+                  <Column style={styles.levelAccessColumn} valign="top">
                     <Text style={styles.levelAccess}>{level.access}</Text>
+                    {level.accessNote ? (
+                      <Text style={styles.levelNote}>{level.accessNote}</Text>
+                    ) : null}
                   </Column>
                 </Row>
               ))}
@@ -353,28 +383,29 @@ export function PredefinedEmailTemplate({
           </Section>
 
           <Section className="email-pad" style={styles.contentSection}>
-            <SectionHeading
-              eyebrow="03 · THE VALUE"
-              title="Why should your institution participate?"
-            />
+            <SectionHeading title="Why should your institution participate?" />
             <Row>
-              {content.benefits.map((benefit) => (
-                <Column
-                  key={benefit.title}
-                  className="email-column"
-                  style={{
-                    ...styles.benefitCard,
-                    borderTopColor: benefit.accent,
-                  }}
-                  valign="top"
-                >
-                  <Text style={styles.benefitTitle}>{benefit.title}</Text>
-                  {benefit.items.map((item) => (
-                    <Text key={item} style={styles.benefitItem}>
-                      <span style={{ color: benefit.accent }}>●</span> {item}
-                    </Text>
-                  ))}
-                </Column>
+              {content.benefits.map((benefit, index) => (
+                <Fragment key={benefit.title}>
+                  {index > 0 ? (
+                    <Column className="email-spacer" style={styles.columnSpacer} />
+                  ) : null}
+                  <Column
+                    className="email-column"
+                    style={{
+                      ...styles.benefitCard,
+                      borderLeftColor: benefit.accent,
+                    }}
+                    valign="top"
+                  >
+                    <Text style={styles.benefitTitle}>{benefit.title}</Text>
+                    {benefit.items.map((item) => (
+                      <Text key={item} style={styles.benefitItem}>
+                        <span style={{ color: benefit.accent }}>●</span> {item}
+                      </Text>
+                    ))}
+                  </Column>
+                </Fragment>
               ))}
             </Row>
           </Section>
@@ -399,25 +430,28 @@ export function PredefinedEmailTemplate({
           </Section>
 
           <Section className="email-pad" style={styles.contentSection}>
-            <SectionHeading eyebrow="04 · THE TIMELINE" title="Key dates" />
+            <SectionHeading title="Key dates" />
             <Row>
-              {content.keyDates.map((date) => (
-                <Column
-                  key={date.label}
-                  className="email-column"
-                  style={{ ...styles.dateCard, backgroundColor: date.color }}
-                  valign="top"
-                >
-                  <Text style={styles.dateLabel}>{date.label}</Text>
-                  <Text style={styles.dateValue}>{date.value}</Text>
-                </Column>
+              {content.keyDates.map((date, index) => (
+                <Fragment key={date.label}>
+                  {index > 0 ? (
+                    <Column className="email-spacer" style={styles.columnSpacer} />
+                  ) : null}
+                  <Column
+                    className="email-column"
+                    style={{ ...styles.dateCard, backgroundColor: date.color }}
+                    valign="top"
+                  >
+                    <Text style={styles.dateLabel}>{date.label}</Text>
+                    <Text style={styles.dateValue}>{date.value}</Text>
+                  </Column>
+                </Fragment>
               ))}
             </Row>
           </Section>
 
           <Section className="email-pad" style={styles.ctaWrapper}>
             <Section style={styles.ctaSection}>
-              <Text style={styles.ctaEyebrow}>05 · NEXT STEP</Text>
               <Heading as="h2" style={styles.ctaHeading}>
                 A simple first step
               </Heading>
@@ -430,7 +464,7 @@ export function PredefinedEmailTemplate({
                 .
               </Text>
               <Button href={replyHref} style={styles.ctaButton}>
-                Reply: We are interested
+                Reply: We are interested →
               </Button>
               <Text style={styles.ctaNote}>
                 <strong>
@@ -448,8 +482,7 @@ export function PredefinedEmailTemplate({
               demonstrate not only what they know, but how well they can{" "}
               <strong>think, apply and grow</strong>.
             </Text>
-            <Hr style={styles.signatureDivider} />
-            <Section style={styles.signatureCard}>
+            <Section style={styles.signatureBlock}>
               <Text style={styles.signatureClosing}>
                 {content.signature.closing}
               </Text>
@@ -458,16 +491,19 @@ export function PredefinedEmailTemplate({
                 {content.signature.organization}
               </Text>
               <Text style={styles.signatureContact}>
-                {content.signature.email}
+                {content.signature.designation} | {content.signature.email}
               </Text>
             </Section>
           </Section>
 
           <Section style={styles.footer}>
-            <Text style={styles.footerBrand}>
-              Edu<span style={styles.wordmarkAccent}>Deca</span>{" "}
-              <span style={styles.footerDivider}>/</span> Whiz360
-            </Text>
+            <Img
+              alt="EduDeca"
+              height="46"
+              src="cid:edudeca-logo"
+              style={styles.footerLogo}
+              width="130"
+            />
             <Text style={styles.footerText}>
               Discovering India&apos;s next generation of all-round thinkers.
             </Text>
@@ -484,38 +520,30 @@ const styles = {
     color: BRAND.text,
     fontFamily: "Arial, Helvetica, sans-serif",
     margin: "0",
-    padding: "28px 10px",
+    padding: "28px 0",
   },
   container: {
     backgroundColor: BRAND.white,
-    border: `1px solid ${BRAND.line}`,
     borderRadius: "18px",
+    boxShadow: "0 8px 28px rgba(13, 27, 42, 0.1)",
     margin: "0 auto",
-    maxWidth: "680px",
+    maxWidth: "720px",
     overflow: "hidden",
   },
   brandBar: {
     backgroundColor: BRAND.ink,
     padding: "24px 38px 18px",
   },
-  wordmark: {
-    color: BRAND.white,
-    fontSize: "30px",
-    fontWeight: "800",
-    letterSpacing: "-1.2px",
-    lineHeight: "32px",
-    margin: "0",
-  },
-  wordmarkAccent: { color: BRAND.orange },
+  headerLogo: { display: "block", height: "auto", maxWidth: "200px" },
   tagline: {
     color: "#BDCAD8",
     fontSize: "10px",
     fontWeight: "700",
     letterSpacing: "1.6px",
     lineHeight: "16px",
-    margin: "4px 0 0",
+    margin: "12px 0 0",
   },
-  audienceColumn: { width: "125px" },
+  audienceColumn: { width: "165px" },
   audiencePill: {
     backgroundColor: BRAND.inkSoft,
     border: "1px solid #315171",
@@ -530,15 +558,14 @@ const styles = {
   },
   hero: {
     backgroundColor: BRAND.ink,
-    padding: "26px 38px 40px",
+    padding: "18px 38px 38px",
   },
   heroEyebrow: {
-    color: BRAND.orange,
-    fontSize: "11px",
+    color: BRAND.blue,
+    fontSize: "15px",
     fontWeight: "800",
-    letterSpacing: "1.25px",
-    lineHeight: "18px",
-    margin: "0 0 12px",
+    lineHeight: "22px",
+    margin: "0 0 10px",
   },
   heroHeading: {
     color: BRAND.white,
@@ -549,7 +576,7 @@ const styles = {
     margin: "0 0 18px",
     maxWidth: "560px",
   },
-  heroAccent: { color: BRAND.orange },
+  heroAccent: { color: BRAND.blue },
   heroText: {
     color: "#CFDAE6",
     fontSize: "16px",
@@ -558,7 +585,7 @@ const styles = {
     maxWidth: "575px",
   },
   whiteText: { color: BRAND.white },
-  introduction: { padding: "36px 38px 6px" },
+  introduction: { padding: "34px 38px 8px" },
   salutation: {
     color: BRAND.ink,
     fontSize: "16px",
@@ -578,15 +605,7 @@ const styles = {
     lineHeight: "24px",
     margin: "0",
   },
-  contentSection: { padding: "34px 38px 0" },
-  sectionEyebrow: {
-    color: BRAND.orange,
-    fontSize: "10px",
-    fontWeight: "800",
-    letterSpacing: "1.5px",
-    lineHeight: "16px",
-    margin: "0 0 7px",
-  },
+  contentSection: { padding: "32px 38px 0" },
   sectionHeading: {
     color: BRAND.ink,
     fontSize: "25px",
@@ -602,10 +621,11 @@ const styles = {
     margin: "-7px 0 17px",
   },
   featureCard: {
-    borderRadius: "10px",
-    borderTop: "4px solid",
+    border: `1px solid ${BRAND.line}`,
+    borderRadius: "12px",
     padding: "18px",
   },
+  columnSpacer: { width: "2%" },
   cardTitle: {
     fontSize: "16px",
     fontWeight: "700",
@@ -620,45 +640,52 @@ const styles = {
   },
   journeyFrame: {
     border: `1px solid ${BRAND.line}`,
-    borderRadius: "12px",
-    padding: "0 18px",
+    padding: "0",
   },
-  journeyRow: { borderBottom: `1px solid ${BRAND.line}` },
-  levelColumn: { padding: "17px 14px 17px 0", width: "74px" },
+  journeyHeader: {
+    backgroundColor: BRAND.ink,
+    color: BRAND.white,
+    fontSize: "11px",
+    fontWeight: "700",
+  },
+  journeyHeaderLevel: { padding: "11px 12px", width: "15%" },
+  journeyHeaderFormat: { padding: "11px 12px", width: "43%" },
+  journeyHeaderAccess: { padding: "11px 12px", width: "42%" },
+  journeyRow: { borderTop: `1px solid ${BRAND.line}` },
+  journeyRowAlternate: { backgroundColor: "#FBFCFE" },
+  levelColumn: { padding: "14px 12px", width: "15%" },
   levelNumber: {
-    color: BRAND.orange,
-    fontSize: "20px",
+    color: BRAND.blue,
+    fontSize: "14px",
     fontWeight: "800",
-    lineHeight: "22px",
+    lineHeight: "21px",
     margin: "0",
   },
-  levelLabel: {
-    color: BRAND.muted,
-    fontSize: "9px",
-    fontWeight: "700",
-    letterSpacing: "1px",
-    lineHeight: "13px",
-    margin: "3px 0 0",
-  },
-  levelDetails: { padding: "16px 0" },
+  levelFormatColumn: { padding: "14px 12px", width: "43%" },
+  levelAccessColumn: { padding: "14px 12px", width: "42%" },
   levelFormat: {
     color: BRAND.ink,
-    fontSize: "13px",
-    fontWeight: "600",
-    lineHeight: "20px",
-    margin: "0 0 4px",
-  },
-  levelAccess: {
-    color: BRAND.muted,
-    fontSize: "12px",
-    lineHeight: "19px",
+    fontSize: "14px",
+    lineHeight: "21px",
     margin: "0",
   },
+  levelAccess: {
+    color: BRAND.text,
+    fontSize: "14px",
+    fontWeight: "700",
+    lineHeight: "21px",
+    margin: "0",
+  },
+  levelNote: {
+    color: BRAND.muted,
+    fontSize: "12px",
+    lineHeight: "18px",
+    margin: "3px 0 0",
+  },
   benefitCard: {
-    border: `1px solid ${BRAND.line}`,
-    borderRadius: "10px",
-    borderTop: "4px solid",
-    padding: "18px",
+    backgroundColor: "#F7FAFC",
+    borderLeft: "5px solid",
+    padding: "17px 18px",
     width: "49%",
   },
   benefitTitle: {
@@ -680,8 +707,8 @@ const styles = {
     padding: "27px",
   },
   recognitionEyebrow: {
-    color: BRAND.orange,
-    fontSize: "10px",
+    color: BRAND.blue,
+    fontSize: "13px",
     fontWeight: "800",
     letterSpacing: "1.4px",
     lineHeight: "16px",
@@ -722,19 +749,12 @@ const styles = {
     lineHeight: "22px",
     margin: "0",
   },
-  ctaWrapper: { padding: "36px 38px 0" },
+  ctaWrapper: { padding: "34px 38px 0" },
   ctaSection: {
-    backgroundColor: "#F8F4EE",
-    borderLeft: `5px solid ${BRAND.orange}`,
-    padding: "26px 27px",
-  },
-  ctaEyebrow: {
-    color: BRAND.orange,
-    fontSize: "10px",
-    fontWeight: "800",
-    letterSpacing: "1.4px",
-    lineHeight: "16px",
-    margin: "0 0 7px",
+    backgroundColor: "#F7FAFC",
+    border: `1px solid ${BRAND.line}`,
+    borderRadius: "14px",
+    padding: "24px",
   },
   ctaHeading: {
     color: BRAND.ink,
@@ -751,8 +771,8 @@ const styles = {
     margin: "0 0 18px",
   },
   ctaButton: {
-    backgroundColor: BRAND.orange,
-    borderRadius: "7px",
+    backgroundColor: BRAND.blue,
+    borderRadius: "8px",
     color: BRAND.ink,
     fontSize: "13px",
     fontWeight: "800",
@@ -765,66 +785,50 @@ const styles = {
     lineHeight: "19px",
     margin: "18px 0 0",
   },
-  closingSection: { padding: "34px 38px 32px" },
+  closingSection: { padding: "34px 38px 28px" },
   closingText: {
     color: BRAND.text,
     fontSize: "15px",
     lineHeight: "24px",
     margin: "0",
   },
-  signatureDivider: {
-    borderColor: BRAND.line,
-    margin: "25px 0 21px",
-  },
-  signatureCard: {
-    backgroundColor: "#F8FAFC",
-    border: `1px solid ${BRAND.line}`,
-    borderLeft: `4px solid ${BRAND.orange}`,
-    borderRadius: "12px",
-    padding: "20px",
-  },
+  signatureBlock: { padding: "18px 0 0" },
   signatureClosing: {
-    color: BRAND.muted,
-    fontSize: "10px",
-    fontWeight: "700",
-    letterSpacing: "1px",
-    lineHeight: "15px",
-    margin: "0 0 4px",
-    textTransform: "uppercase" as const,
+    color: BRAND.text,
+    fontSize: "15px",
+    lineHeight: "23px",
+    margin: "0",
   },
   signatureName: {
     color: BRAND.ink,
-    fontSize: "20px",
+    fontSize: "15px",
     fontWeight: "800",
-    lineHeight: "25px",
+    lineHeight: "23px",
     margin: "0",
   },
   signatureOrganization: {
-    color: BRAND.orange,
-    fontSize: "13px",
-    fontWeight: "700",
-    lineHeight: "19px",
-    margin: "1px 0 0",
+    color: BRAND.text,
+    fontSize: "15px",
+    lineHeight: "23px",
+    margin: "0",
   },
   signatureContact: {
     color: BRAND.muted,
-    fontSize: "11px",
-    lineHeight: "17px",
-    margin: "1px 0 0",
+    fontSize: "13px",
+    lineHeight: "20px",
+    margin: "0",
   },
   footer: {
     backgroundColor: BRAND.ink,
-    padding: "20px 38px",
+    padding: "22px 38px",
     textAlign: "center" as const,
   },
-  footerBrand: {
-    color: BRAND.white,
-    fontSize: "16px",
-    fontWeight: "800",
-    lineHeight: "21px",
-    margin: "0",
+  footerLogo: {
+    display: "block",
+    height: "auto",
+    margin: "0 auto",
+    maxWidth: "130px",
   },
-  footerDivider: { color: "#708297" },
   footerText: {
     color: "#BDCAD8",
     fontSize: "10px",

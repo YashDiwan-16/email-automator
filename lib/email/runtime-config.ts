@@ -48,7 +48,7 @@ export function getEmailRuntimeConfiguration(
     },
     sender: {
       email: result.data.EMAIL_ADMIN,
-      name: "Email Admin",
+      name: "EduDeca",
     },
     replyTo: result.data.EMAIL_ADMIN,
   };

@@ -26,7 +26,7 @@ describe("getEmailRuntimeConfiguration", () => {
       },
       sender: {
         email: "admin@example.com",
-        name: "Email Admin",
+        name: "EduDeca",
       },
       replyTo: "admin@example.com",
     });

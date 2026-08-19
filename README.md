@@ -19,9 +19,10 @@ The email subject and message are stored in
 [`lib/email/template.tsx`](lib/email/template.tsx). Review that file before you
 send a real email.
 
-The approved email is the EduDeca – Whiz360 college introduction and invitation.
+The approved email is the EduDeca – Whiz360 Science-college introduction and
+invitation.
 The `university` value replaces the recipient college/school placeholder. Its
-default closing is fixed as Mr. Sankar, EduDeca – Whiz360, and
+default closing is fixed as Sankar Lakshmanan, EduDeca – Whiz360, Founder, and
 `alexis36sg@gmail.com`. These closing details are not entered through the
 browser or CSV.
 

@@ -51,10 +51,17 @@ describe("sendPredefinedEmail", () => {
       bcc: baseInput.bcc,
       subject: "EduDeca – Invitation to Participate",
       text: content.text,
+      attachments: [
+        expect.objectContaining({
+          filename: "edudeca-logo.png",
+          cid: "edudeca-logo",
+          contentDisposition: "inline",
+        }),
+      ],
     });
     expect(messages[0]?.text).toContain("Dear Principal / Head of Institution,");
     expect(messages[0]?.text).toContain(
-      "We invite XYZ University to express interest in participating in EduDeca – Whiz360",
+      "We invite XYZ University to express interest in participating in EduDeca – Whiz360, a 360° Knowledge Challenge for Class XI and XII Science students",
     );
     expect(messages[0]?.text).toContain("What does Whiz360 test?");
     expect(messages[0]?.text).toContain("The 10-level journey");
@@ -64,17 +71,21 @@ describe("sendPredefinedEmail", () => {
     expect(messages[0]?.text).toContain("₹10 lakh first prize");
     expect(messages[0]?.text).toContain("28 Aug 2026");
     expect(messages[0]?.text).toContain(
-      "Warm Regards\nMr. Sankar\nEduDeca – Whiz360\nalexis36sg@gmail.com",
+      "Warm Regards\nSankar Lakshmanan\nEduDeca – Whiz360\nFounder | alexis36sg@gmail.com",
     );
     expect(messages[0]?.text).not.toContain("RDM University");
-    expect(messages[0]?.text).not.toContain("Principal\n");
+    expect(messages[0]?.text).not.toContain("Mr. Sankar");
     expect(messages[0]?.text).not.toContain("8010354828");
     expect(messages[0]?.text).not.toContain("Wiz360");
     expect(messages[0]?.text).not.toContain("Designation");
     expect(messages[0]?.text).not.toContain("{{");
     expect(messages[0]?.html).toContain("Dear Principal / Head of Institution");
     expect(messages[0]?.html).toContain("XYZ University");
-    expect(messages[0]?.html).toContain("Mr. Sankar");
+    expect(messages[0]?.html).toContain("Sankar Lakshmanan");
+    expect(messages[0]?.html).toContain("CLASS XI &amp; XII SCIENCE");
+    expect(messages[0]?.html).toContain("Founder");
+    expect(messages[0]?.html).toContain("#01262E");
+    expect(messages[0]?.html).toContain('src="cid:edudeca-logo"');
     expect(messages[0]?.html).not.toContain(">MS<");
     expect(messages[0]?.html).not.toContain("Designation");
     expect(messages[0]?.html).toContain("alexis36sg@gmail.com");

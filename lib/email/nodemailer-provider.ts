@@ -124,6 +124,7 @@ export class NodemailerEmailProvider implements EmailProvider {
         subject: message.subject,
         html: message.html,
         text: message.text,
+        attachments: message.attachments,
         ...(message.envelopeRecipients
           ? {
               envelope: {

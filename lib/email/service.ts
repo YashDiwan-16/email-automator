@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { render } from "react-email";
 
 import type { DeliverySummary, RecipientDeliveryResult } from "@/types/email";
@@ -27,6 +29,12 @@ interface SendPredefinedEmailOptions {
 
 const DEFAULT_MAXIMUM_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 200;
+const EMAIL_LOGO_ATTACHMENT = {
+  filename: "edudeca-logo.png",
+  path: path.join(process.cwd(), "lib/email/assets/edudeca-logo.png"),
+  cid: "edudeca-logo",
+  contentDisposition: "inline",
+} as const;
 
 async function wait(milliseconds: number): Promise<void> {
   if (milliseconds <= 0) {
@@ -97,6 +105,7 @@ export async function sendPredefinedEmail({
     subject: content.subject,
     html,
     text: content.text,
+    attachments: [EMAIL_LOGO_ATTACHMENT],
   };
   const attempts = Math.max(1, maximumAttempts);
   const resolved = new Map<string, RecipientDeliveryResult>();

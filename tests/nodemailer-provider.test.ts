@@ -15,6 +15,14 @@ const message: ProviderMessage = {
   subject: "A useful update",
   html: "<p>Hello from the product team.</p>",
   text: "Hello from the product team.",
+  attachments: [
+    {
+      filename: "logo.png",
+      path: "/tmp/logo.png",
+      cid: "brand-logo",
+      contentDisposition: "inline",
+    },
+  ],
 };
 
 describe("NodemailerEmailProvider", () => {
@@ -58,6 +66,7 @@ describe("NodemailerEmailProvider", () => {
       subject: "A useful update",
       html: "<p>Hello from the product team.</p>",
       text: "Hello from the product team.",
+      attachments: message.attachments,
     });
     expect(result).toEqual({
       status: "completed",
